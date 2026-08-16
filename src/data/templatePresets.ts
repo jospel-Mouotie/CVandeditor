@@ -17,14 +17,14 @@ export interface CVTemplatePreset {
   formeSidebarDecor?: 'straight' | 'arch-top' | 'wave-cut' | 'diagonal-cut' | 'card-float';
   timelineStyle?: 'none' | 'line-dots' | 'accent-pills' | 'left-bar';
   cadrePhotoRing?: 'none' | 'double-ring' | 'gold-ring' | 'accent-ring';
-  styleEnTete?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top';
-  styleEnTeteSection?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header';
-  styleCompetences?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor';
+  styleEnTete?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top' | 'tech-arches';
+  styleEnTeteSection?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header' | 'badge-line';
+  styleCompetences?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor' | 'tech-cards';
   alignementDatesExperience?: 'left' | 'top' | 'inline';
   photoForme?: 'ronde' | 'carree' | 'arrondie' | 'hexagone' | 'arche' | 'galet';
   photoPosition?: 'in-header' | 'in-sidebar';
   police: string;
-  photoUrl: string;
+  photoUrl?: string;
   sections: Section[];
 }
 
@@ -3542,6 +3542,538 @@ export const TEMPLATE_PRESETS: Record<string, CVTemplatePreset> = {
         ]
       }
     ]
+  },
+  'modele-51': {
+    titre: 'Ingénieur Génie Logiciel | Infrastructure & Systèmes IT',
+    couleurAccent: '#0F2744',
+    couleurAccentSecondaire: '#0284C7',
+    couleurFond: '#FFFFFF',
+    couleurTexte: '#1E293B',
+    couleurTitreSection: '#0F2744',
+    police: 'Inter',
+    nombreColonnes: 1,
+    styleEnTete: 'tech-arches',
+    styleEnTeteSection: 'badge-line',
+    styleCompetences: 'tech-cards',
+    photoForme: 'carree',
+    sections: [
+      {
+        id: 'sec-p-m51',
+        type: 'profil',
+        titre: 'PROFIL PROFESSIONNEL',
+        ordre: 1,
+        visible: true,
+        contenu: {
+          nomComplet: 'ONIMB MOUSSENI YANN LANDY',
+          titreProfessionnel: 'Ingénieur Génie Logiciel | Infrastructure, Systèmes & Solutions IT',
+          email: 'mousseniy@gmail.com',
+          telephone: '+237 6 98 95 83 57',
+          adresse: 'Douala, Yassa – Cameroun',
+          resume: 'Ingénieur en Génie Logiciel diplômé de l’École Nationale Supérieure Polytechnique de Douala, avec un profil transversal en ingénierie logicielle, systèmes et infrastructures informatiques. Fort d’une expérience en conception de solutions numériques, développement d’applications et exploitation des environnements informatiques, je souhaite mettre mes compétences au service de projets technologiques à fort enjeu opérationnel, en contribuant à la conception, la sécurisation et l’évolution de solutions fiables et maintenables.'
+        }
+      },
+      {
+        id: 'sec-comp-m51',
+        type: 'competences',
+        titre: 'COMPÉTENCES CLÉS',
+        ordre: 2,
+        visible: true,
+        contenu: [
+          {
+            id: 'sk-51-1',
+            nom: 'DEVELOPPEMENT & IT',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-51-1', nom: 'Création des tableaux de bord et KPI opérationnels' },
+              { id: 'sub-51-2', nom: 'Analyse et modélisation des processus métiers' },
+              { id: 'sub-51-3', nom: 'Développement d’API REST' },
+              { id: 'sub-51-4', nom: 'Intégration de systèmes et services' },
+              { id: 'sub-51-5', nom: 'ORM, modélisation et gestion des données relationnelles et NoSQL' }
+            ]
+          },
+          {
+            id: 'sk-51-2',
+            nom: 'SYSTEMES & INFRASTRUCTURES',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-51-6', nom: 'Administration des environnements Windows & Linux' },
+              { id: 'sub-51-7', nom: 'Gestion & exploitation des serveurs via des connexions ssh' },
+              { id: 'sub-51-8', nom: 'Configuration des services systèmes' },
+              { id: 'sub-51-9', nom: 'Diagnostic et résolution d’incidents' }
+            ]
+          },
+          {
+            id: 'sk-51-3',
+            nom: 'AUTOMATISATION, SECURITE & PERFORMANCE',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-51-10', nom: 'Automatisation des cycles de développement, déploiement et livraison des applications' },
+              { id: 'sub-51-11', nom: 'Gestion des projets informatiques selon des méthodologies en cascade, agile et bien autres' },
+              { id: 'sub-51-12', nom: 'Intégrations des processus de sécurité selon des normes iso' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sec-tools-m51',
+        type: 'personnalisee',
+        titre: 'OUTILS & TECHNOLOGIES',
+        ordre: 3,
+        visible: true,
+        contenu: [
+          { id: 'tool-1', titre: 'Systèmes', description: 'Linux, Windows' },
+          { id: 'tool-2', titre: 'Développement', description: 'JavaScript/TypeScript, Node.js, React, PHP/Laravel' },
+          { id: 'tool-3', titre: 'Bases de données', description: 'MongoDB, MySQL, PostgreSQL' },
+          { id: 'tool-4', titre: 'Virtualisation & conteneurs', description: 'Docker, Kubernetes, environnements virtualisés (VirtualBox, Hyper-V)' },
+          { id: 'tool-5', titre: 'Versionnement & automatisation', description: 'Git, GitHub, CI/CD (GitHub Actions, Jenkins)' },
+          { id: 'tool-6', titre: 'Supervision & exploitation', description: 'Prometheus, Grafana' }
+        ]
+      },
+      {
+        id: 'sec-exp-m51',
+        type: 'experience',
+        titre: 'EXPÉRIENCES PROFESSIONNELLES & ACADÉMIQUES',
+        ordre: 4,
+        visible: true,
+        contenu: [
+          {
+            id: 'exp-51-1',
+            poste: 'Stagiaire Infrastructure & Système',
+            entreprise: 'BOISSONS DU CAMEROUN',
+            ville: 'Douala',
+            dateDebut: 'Février 2026',
+            dateFin: 'Juillet 2026',
+            description: '**Contexte : Migration et modernisation du déploiement d’applications**\n• Mise en place d’une infrastructure de déploiement Kubernetes à deux nœuds pour améliorer la disponibilité et la gestion des applications.\n• Migration d’une application pilote d’une infrastructure virtualisée vers une infrastructure conteneurisée afin de standardiser et fiabiliser cette méthode de déploiement pour les autres applications.\n• Mise en place d’une solution de supervision centralisée pour améliorer le suivi des applications, des ressources systèmes et des incidents.'
+          },
+          {
+            id: 'exp-51-2',
+            poste: 'Stagiaire Digitalisation & IT',
+            entreprise: 'IWOMI TECHNOLOGIES',
+            ville: 'Douala',
+            dateDebut: 'Juin 2025',
+            dateFin: 'Septembre 2025',
+            description: '**Contexte : Surveillance continue des serveurs, prévention et alertes automatiques des incidents**\n• Mise en place d’un système de centralisation des données d’un serveur.\n• Mise en place d’une supervision périodique de 5min pour la vérification de la santé des serveurs.\n• Automatisation d’un système d’alertes en cas d’incident par mail via des protocoles SMTP Brevo.'
+          },
+          {
+            id: 'exp-51-3',
+            poste: 'Projet académique — Digitalisation administrative',
+            entreprise: 'ÉCOLE NATIONALE SUPÉRIEURE POLYTECHNIQUE DE DOUALA',
+            ville: 'Douala',
+            dateDebut: '2025',
+            dateFin: '2026',
+            description: '**Contexte : Digitalisation et automatisation de la demande de documents administratifs pour étudiants**\n• Soumission en ligne des demandes et pièces justificatives.\n• Traitement administratif dématérialisé avec validation ou rejet motivé.\n• Stockage sécurisé des documents et gestion centralisée des pièces.\n• Notifications et transmissions automatisées des réponses et documents par mail.'
+          }
+        ]
+      },
+      {
+        id: 'sec-form-m51',
+        type: 'formation',
+        titre: 'FORMATION & CERTIFICATIONS',
+        ordre: 5,
+        visible: true,
+        contenu: [
+          {
+            id: 'form-51-1',
+            diplome: 'Diplôme d’Ingénieur en Génie Logiciel',
+            etablissement: 'École Nationale Supérieure Polytechnique de Douala (ENSPD)',
+            ville: 'Douala',
+            dateDebut: '2020',
+            dateFin: '2026 (En cours)',
+            description: 'Formation approfondie en génie logiciel, architectures distribuées, bases de données, systèmes d’exploitation et cybersécurité.'
+          },
+          {
+            id: 'form-51-2',
+            diplome: 'Formation complète en Administration Système AWS | CISCO',
+            etablissement: 'Certifications Professionnelles IT',
+            ville: 'En ligne',
+            dateDebut: '2024',
+            dateFin: '2025',
+            description: 'Administration réseau, routage CISCO, virtualisation et déploiements cloud AWS.'
+          }
+        ]
+      },
+      {
+        id: 'sec-lang-m51',
+        type: 'langues',
+        titre: 'LANGUES',
+        ordre: 6,
+        visible: true,
+        contenu: [
+          { id: 'lang-51-1', langue: 'Français', niveau: 'Courant (Langue de travail)' },
+          { id: 'lang-51-2', langue: 'Anglais', niveau: 'Intermédiaire (Lecture technique, documentation)' }
+        ]
+      }
+    ]
+  },
+  'modele-52': {
+    titre: 'Ingénieur IT Senior | Architecture Systèmes & Cloud',
+    couleurAccent: '#18181B',
+    couleurAccentSecondaire: '#D97706',
+    couleurFond: '#FFFFFF',
+    couleurTexte: '#18181B',
+    couleurTitreSection: '#18181B',
+    police: 'Outfit',
+    nombreColonnes: 1,
+    styleEnTete: 'tech-arches',
+    styleEnTeteSection: 'badge-line',
+    styleCompetences: 'tech-cards',
+    photoForme: 'carree',
+    sections: [
+      {
+        id: 'sec-p-m52',
+        type: 'profil',
+        titre: 'PROFIL PROFESSIONNEL',
+        ordre: 1,
+        visible: true,
+        contenu: {
+          nomComplet: 'ALEXANDRE VANDENBERG',
+          titreProfessionnel: 'Architecte Systèmes & Solutions Cloud | Lead DevOps',
+          email: 'a.vandenberg@tech-executive.com',
+          telephone: '+33 6 12 34 56 78',
+          adresse: 'Paris & Télétravail international',
+          resume: 'Architecte Systèmes d’Information et Cloud avec 8 ans d’expertise dans le dimensionnement d’infrastructures critiques, la transition vers Kubernetes et la sécurisation des pipelines CI/CD à haute disponibilité.'
+        }
+      },
+      {
+        id: 'sec-comp-m52',
+        type: 'competences',
+        titre: 'COMPÉTENCES CLÉS',
+        ordre: 2,
+        visible: true,
+        contenu: [
+          {
+            id: 'sk-52-1',
+            nom: 'CLOUD & ARCHITECTURE',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-52-1', nom: 'Conception d’infrastructures hybrides AWS / Azure' },
+              { id: 'sub-52-2', nom: 'Orchestration Kubernetes & Helm charts' },
+              { id: 'sub-52-3', nom: 'Infrastructure as Code avec Terraform & Ansible' }
+            ]
+          },
+          {
+            id: 'sk-52-2',
+            nom: 'SYSTÈMES & OBSERVABILITÉ',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-52-4', nom: 'Administration Linux RedHat / Debian avancée' },
+              { id: 'sub-52-5', nom: 'Supervision Datadog, Prometheus & Grafana' },
+              { id: 'sub-52-6', nom: 'Audit de performance et optimisation kernel' }
+            ]
+          },
+          {
+            id: 'sk-52-3',
+            nom: 'SÉCURITÉ & DEVOPS',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-52-7', nom: 'Hardening des conteneurs et conformité ISO 27001' },
+              { id: 'sub-52-8', nom: 'Pipelines CI/CD GitLab & GitHub Actions sécurisés' },
+              { id: 'sub-52-9', nom: 'Gestion des secrets avec HashiCorp Vault' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sec-exp-m52',
+        type: 'experience',
+        titre: 'EXPÉRIENCES PROFESSIONNELLES',
+        ordre: 3,
+        visible: true,
+        contenu: [
+          {
+            id: 'exp-52-1',
+            poste: 'Lead Architecte Cloud & DevOps',
+            entreprise: 'NEXUS CLOUD SOLUTIONS',
+            ville: 'Paris',
+            dateDebut: '2023',
+            dateFin: 'Présent',
+            description: '**Contexte : Migration multi-cloud pour des clients bancaires et e-commerce**\n• Déploiement d’architectures microservices sur EKS avec haute tolérance aux pannes.\n• Réduction des coûts d’infrastructure de 35% grâce au finOps et à l’autoscaling intelligent.'
+          }
+        ]
+      },
+      {
+        id: 'sec-form-m52',
+        type: 'formation',
+        titre: 'FORMATION & CERTIFICATIONS',
+        ordre: 4,
+        visible: true,
+        contenu: [
+          {
+            id: 'form-52-1',
+            diplome: 'Master en Informatique & Systèmes Distribués',
+            etablissement: 'Université Paris-Saclay',
+            ville: 'Paris',
+            dateDebut: '2016',
+            dateFin: '2021',
+            description: 'Spécialisation réseaux haute performance et virtualisation.'
+          }
+        ]
+      }
+    ]
+  },
+  'modele-53': {
+    titre: 'Ingénieur Cloud & DevOps | Émeraude & GreenTech',
+    couleurAccent: '#064E3B',
+    couleurAccentSecondaire: '#0D9488',
+    couleurFond: '#FFFFFF',
+    couleurTexte: '#1E293B',
+    couleurTitreSection: '#064E3B',
+    police: 'Inter',
+    nombreColonnes: 1,
+    styleEnTete: 'tech-arches',
+    styleEnTeteSection: 'badge-line',
+    styleCompetences: 'tech-cards',
+    photoForme: 'carree',
+    sections: [
+      {
+        id: 'sec-p-m53',
+        type: 'profil',
+        titre: 'PROFIL PROFESSIONNEL',
+        ordre: 1,
+        visible: true,
+        contenu: {
+          nomComplet: 'MATHIEU DELORME',
+          titreProfessionnel: 'Ingénieur Infrastructure & Solutions Green IT',
+          email: 'mathieu.delorme@greentech-cloud.fr',
+          telephone: '+33 6 45 89 12 30',
+          adresse: 'Lyon / Genève',
+          resume: 'Expert en éco-conception logicielle et optimisation énergétique des datacenters. Passionné par l’automatisation des déploiements conteneurisés et la mesure d’empreinte carbone des systèmes IT.'
+        }
+      },
+      {
+        id: 'sec-comp-m53',
+        type: 'competences',
+        titre: 'COMPÉTENCES CLÉS',
+        ordre: 2,
+        visible: true,
+        contenu: [
+          {
+            id: 'sk-53-1',
+            nom: 'DÉVELOPPEMENT & ECO-DESIGN',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-53-1', nom: 'Mesure et réduction d’empreinte carbone IT' },
+              { id: 'sub-53-2', nom: 'Développement API Node.js / Go performant' },
+              { id: 'sub-53-3', nom: 'Optimisation des requêtes SQL / NoSQL' }
+            ]
+          },
+          {
+            id: 'sk-53-2',
+            nom: 'INFRASTRUCTURE & DOCKER',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-53-3', nom: 'Conteneurisation légère multi-arch' },
+              { id: 'sub-53-4', nom: 'Clusters Kubernetes K3s & edge computing' },
+              { id: 'sub-53-5', nom: 'Réseaux virtuels et VPN sécurisés' }
+            ]
+          },
+          {
+            id: 'sk-53-3',
+            nom: 'AUTOMATISATION & QUALITÉ',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-53-6', nom: 'CI/CD automatisé et tests de régression' },
+              { id: 'sub-53-7', nom: 'Monitoring open-source Prometheus/Grafana' },
+              { id: 'sub-53-8', nom: 'Gestion de configuration avec Ansible' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sec-exp-m53',
+        type: 'experience',
+        titre: 'EXPÉRIENCES PROFESSIONNELLES',
+        ordre: 3,
+        visible: true,
+        contenu: [
+          {
+            id: 'exp-53-1',
+            poste: 'Ingénieur Cloud & Systèmes',
+            entreprise: 'ECO-CLOUD SYSTEMS',
+            ville: 'Lyon',
+            dateDebut: '2022',
+            dateFin: 'Présent',
+            description: '**Contexte : Déploiement d’infrastructures cloud sobres en carbone**\n• Supervision continue de 50+ nœuds de calcul et alertes proactives.\n• Réduction de 40% de la consommation CPU moyenne des applications web.'
+          }
+        ]
+      }
+    ]
+  },
+  'modele-54': {
+    titre: 'Expert Cybersécurité & Ingénieur Systèmes | Cyber Indigo',
+    couleurAccent: '#1E1B4B',
+    couleurAccentSecondaire: '#6366F1',
+    couleurFond: '#FFFFFF',
+    couleurTexte: '#1E1B4B',
+    couleurTitreSection: '#1E1B4B',
+    police: 'Inter',
+    nombreColonnes: 1,
+    styleEnTete: 'tech-arches',
+    styleEnTeteSection: 'badge-line',
+    styleCompetences: 'tech-cards',
+    photoForme: 'carree',
+    sections: [
+      {
+        id: 'sec-p-m54',
+        type: 'profil',
+        titre: 'PROFIL PROFESSIONNEL',
+        ordre: 1,
+        visible: true,
+        contenu: {
+          nomComplet: 'DAMIEN KOUASSI',
+          titreProfessionnel: 'Ingénieur Sécurité des Systèmes d’Information & DevSecOps',
+          email: 'damien.kouassi@cyber-defense.io',
+          telephone: '+225 07 89 45 12 36',
+          adresse: 'Abidjan / Paris',
+          resume: 'Ingénieur en sécurité des systèmes et réseaux avec certification CEH et CISSP. Spécialiste de la détection d’intrusions, du durcissement des serveurs Linux/Windows et de l’intégration de la sécurité dans le cycle DevOps.'
+        }
+      },
+      {
+        id: 'sec-comp-m54',
+        type: 'competences',
+        titre: 'COMPÉTENCES CLÉS',
+        ordre: 2,
+        visible: true,
+        contenu: [
+          {
+            id: 'sk-54-1',
+            nom: 'CYBERDÉFENSE & SOC',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-54-1', nom: 'Analyse des logs SIEM (Wazuh, Splunk)' },
+              { id: 'sub-54-2', nom: 'Détection d’anomalies et réponse aux incidents' },
+              { id: 'sub-54-3', nom: 'Tests d’intrusion et audits de vulnérabilités' }
+            ]
+          },
+          {
+            id: 'sk-54-2',
+            nom: 'DEVSECOPS & CONTENEURS',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-54-4', nom: 'Scan de vulnérabilités Trivy & SonarQube' },
+              { id: 'sub-54-5', nom: 'Durcissement Kubernetes (Falco, OPA Gatekeeper)' },
+              { id: 'sub-54-6', nom: 'Gestion d’accès IAM et Zero Trust' }
+            ]
+          },
+          {
+            id: 'sk-54-3',
+            nom: 'INFRASTRUCTURES CRITIQUES',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-54-7', nom: 'Administration serveurs Linux Debian/RHEL' },
+              { id: 'sub-54-8', nom: 'Protocoles cryptographiques TLS, PKI, SSH' },
+              { id: 'sub-54-9', nom: 'Plans de reprise d’activité (PRA / PCA)' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sec-exp-m54',
+        type: 'experience',
+        titre: 'EXPÉRIENCES PROFESSIONNELLES',
+        ordre: 3,
+        visible: true,
+        contenu: [
+          {
+            id: 'exp-54-1',
+            poste: 'Ingénieur Sécurité & Systèmes',
+            entreprise: 'CYBERDEFENSE AFRICA',
+            ville: 'Abidjan',
+            dateDebut: '2023',
+            dateFin: 'Présent',
+            description: '**Contexte : Protection des infrastructures bancaires et télécoms**\n• Déploiement d’un SIEM open-source centralisé pour 200+ serveurs.\n• Conduite de simulations d’attaques et durcissement des configurations réseau.'
+          }
+        ]
+      }
+    ]
+  },
+  'modele-55': {
+    titre: 'Directeur Technique & Lead IT | Bordeaux & Ambre Royal',
+    couleurAccent: '#881337',
+    couleurAccentSecondaire: '#E11D48',
+    couleurFond: '#FFFFFF',
+    couleurTexte: '#1C1917',
+    couleurTitreSection: '#881337',
+    police: 'Montserrat',
+    nombreColonnes: 1,
+    styleEnTete: 'tech-arches',
+    styleEnTeteSection: 'badge-line',
+    styleCompetences: 'tech-cards',
+    photoForme: 'carree',
+    sections: [
+      {
+        id: 'sec-p-m55',
+        type: 'profil',
+        titre: 'PROFIL PROFESSIONNEL',
+        ordre: 1,
+        visible: true,
+        contenu: {
+          nomComplet: 'JEAN-BAPTISTE MOREL',
+          titreProfessionnel: 'Directeur des Systèmes d’Information | Head of IT Infrastructure',
+          email: 'jb.morel@direction-it.fr',
+          telephone: '+33 6 78 90 12 34',
+          adresse: 'Bordeaux & Paris',
+          resume: 'Directeur Technique avec 12 ans d’expérience dans le pilotage de programmes de transformation numérique, la direction d’équipes d’ingénieurs et la gouvernance budgétaire et sécuritaire des SI.'
+        }
+      },
+      {
+        id: 'sec-comp-m55',
+        type: 'competences',
+        titre: 'COMPÉTENCES CLÉS',
+        ordre: 2,
+        visible: true,
+        contenu: [
+          {
+            id: 'sk-55-1',
+            nom: 'MANAGEMENT & STRATÉGIE',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-55-1', nom: 'Pilotage de budgets IT (> 5M€)' },
+              { id: 'sub-55-2', nom: 'Management d’équipes pluridisciplinaires (25+ pers.)' },
+              { id: 'sub-55-3', nom: 'Alignement stratégique métiers et ROI technologique' }
+            ]
+          },
+          {
+            id: 'sk-55-2',
+            nom: 'ARCHITECTURE & MODERNISATION',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-55-4', nom: 'Refonte de SI legacy vers le Cloud natif' },
+              { id: 'sub-55-5', nom: 'Gouvernance des données et conformité RGPD' },
+              { id: 'sub-55-6', nom: 'Contractualisation et pilotage des éditeurs/prestataires' }
+            ]
+          },
+          {
+            id: 'sk-55-3',
+            nom: 'CYBERSÉCURITÉ & CONTINUITÉ',
+            niveau: 5,
+            listSousCompetences: [
+              { id: 'sub-55-7', nom: 'Politique de Sécurité des SI (PSSI)' },
+              { id: 'sub-55-8', nom: 'Gestion des crises cyber et résilience opérationnelle' },
+              { id: 'sub-55-9', nom: 'Audit de maturité technologique' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'sec-exp-m55',
+        type: 'experience',
+        titre: 'EXPÉRIENCES PROFESSIONNELLES',
+        ordre: 3,
+        visible: true,
+        contenu: [
+          {
+            id: 'exp-55-1',
+            poste: 'Head of IT & Infrastructure',
+            entreprise: 'GROUPE ATLANTIC DIGITAL',
+            ville: 'Bordeaux',
+            dateDebut: '2020',
+            dateFin: 'Présent',
+            description: '**Contexte : Direction globale des infrastructures et du support utilisateurs**\n• Migration complète de l’infrastructure vers un modèle hybride sécurisé.\n• Optimisation du taux de disponibilité des services critiques à 99,98%.'
+          }
+        ]
+      }
+    ]
   }
 };
 
@@ -3563,7 +4095,7 @@ export function getPresetForTemplate(templateId: string, langue: Language = 'fr'
       if (numCols === 1) {
         col = 'principale';
       } else {
-        if (['profil', 'competences', 'langues', 'interets', 'coordonnees', 'references'].includes(sec.type) || (sec.type === 'personnalisee' && !sec.titre?.toLowerCase().includes('projet') && !sec.titre?.toLowerCase().includes('exp'))) {
+        if (['profil', 'competences', 'langues', 'interets', 'coordonnees', 'references', 'qualites', 'certifications'].includes(sec.type) || (sec.type === 'personnalisee' && !sec.titre?.toLowerCase().includes('projet') && !sec.titre?.toLowerCase().includes('exp'))) {
           col = 'gauche';
         } else {
           col = 'droite';
@@ -3583,6 +4115,14 @@ export function getPresetForTemplate(templateId: string, langue: Language = 'fr'
         newTitle = langue === 'en' ? 'SKILLS' : 'المهارات';
       } else if (sec.type === 'langues') {
         newTitle = langue === 'en' ? 'LANGUAGES' : 'اللغات';
+      } else if (sec.type === 'benevolat') {
+        newTitle = langue === 'en' ? 'VOLUNTEERING' : 'العمل التطوعي';
+      } else if (sec.type === 'publications') {
+        newTitle = langue === 'en' ? 'PUBLICATIONS & RESEARCH' : 'المنشورات والأبحاث';
+      } else if (sec.type === 'distinctions') {
+        newTitle = langue === 'en' ? 'AWARDS & HONORS' : 'الجوائز والتكريمات';
+      } else if (sec.type === 'qualites') {
+        newTitle = langue === 'en' ? 'SOFT SKILLS' : 'المهارات الشخصية';
       }
     }
     return {
@@ -3620,7 +4160,7 @@ export function getCleanPresetForTemplate(templateId: string, langue: Language =
         }
       };
     }
-    if (['experience', 'formation', 'competences', 'langues', 'interets', 'certifications', 'projets', 'benevolat', 'publications'].includes(sec.type)) {
+    if (['experience', 'formation', 'competences', 'langues', 'interets', 'certifications', 'projets', 'benevolat', 'publications', 'distinctions', 'qualites', 'references'].includes(sec.type)) {
       return {
         ...sec,
         contenu: []
@@ -3656,7 +4196,7 @@ export function applyTemplatePresetToCV(currentCV: CV, presetKey: string): CV {
     if (numCols === 1) {
       return { ...sec, colonne: 'principale' as const };
     }
-    if (['profil', 'competences', 'langues', 'interets', 'coordonnees', 'references'].includes(sec.type) || (sec.type === 'personnalisee' && !sec.titre?.toLowerCase().includes('projet') && !sec.titre?.toLowerCase().includes('exp'))) {
+    if (['profil', 'competences', 'langues', 'interets', 'coordonnees', 'references', 'qualites', 'certifications'].includes(sec.type) || (sec.type === 'personnalisee' && !sec.titre?.toLowerCase().includes('projet') && !sec.titre?.toLowerCase().includes('exp'))) {
       return { ...sec, colonne: 'gauche' as const };
     }
     return { ...sec, colonne: 'droite' as const };

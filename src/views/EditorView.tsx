@@ -24,6 +24,7 @@ import { CVPreview } from '../components/CVPreview';
 import { CreatorStudioPanel } from '../components/CreatorStudioPanel';
 import { FormWizard } from '../components/FormWizard';
 import { VisualCVEditor } from '../editor/VisualCVEditor';
+import { CareerToolsModal } from '../components/CareerToolsModal';
 import { toggleColumnLayout } from '../state/cvActions';
 import { exportCVToPDF, exportCVToImage } from '../utils/pdfExport';
 
@@ -47,7 +48,9 @@ import {
   FolderOpen,
   Columns,
   Loader2,
-  Layers
+  Layers,
+  Target,
+  Linkedin
 } from 'lucide-react';
 
 interface EditorViewProps {
@@ -73,11 +76,20 @@ export const EditorView: React.FC<EditorViewProps> = ({
 }) => {
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(langue, key);
 
-  const [cv, setCv] = useState<CV>(initialCV);
+  const [cv, setCv] = useState<CV>(() => ({
+    ...initialCV,
+    sections: initialCV?.sections || []
+  }));
   const [editorMode, setEditorMode] = useState<'visual' | 'form'>(initialMode || 'form');
   const [activeTab, setActiveTab] = useState<'wizard' | 'sections' | 'style' | 'visual' | 'preview'>(
     initialMode === 'visual' ? 'visual' : 'wizard'
   );
+
+  useEffect(() => {
+    if (initialCV) {
+      setCv({ ...initialCV, sections: initialCV.sections || [] });
+    }
+  }, [initialCV]);
 
   useEffect(() => {
     if (initialMode) {
@@ -94,13 +106,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
   // Collapse or Expand All Sections
   const collapseAllSections = () => {
     const map: Record<string, boolean> = {};
-    cv.sections.forEach(s => { map[s.id] = false; });
+    (cv.sections || []).forEach(s => { map[s.id] = false; });
     setExpandedSectionIds(map);
   };
 
   const expandAllSections = () => {
     const map: Record<string, boolean> = {};
-    cv.sections.forEach(s => { map[s.id] = true; });
+    (cv.sections || []).forEach(s => { map[s.id] = true; });
     setExpandedSectionIds(map);
   };
 
@@ -123,6 +135,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving'>('saved');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [exportNotice, setExportNotice] = useState<{ type: 'loading' | 'success' | 'error'; message: string } | null>(null);
+  const [showCareerModal, setShowCareerModal] = useState(false);
+  const [careerModalTab, setCareerModalTab] = useState<'lettre' | 'linkedin' | 'offre'>('lettre');
 
   // DnD Sensors
   const sensors = useSensors(
@@ -210,29 +224,29 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
   // Duplicate Section
   const duplicateSection = (id: string) => {
-    const target = cv.sections.find(s => s.id === id);
+    const target = (cv.sections || []).find(s => s.id === id);
     if (!target) return;
 
     const newSection: Section = {
       ...JSON.parse(JSON.stringify(target)),
       id: `sec-dup-${Date.now()}`,
       titre: `${target.titre} (Copie)`,
-      ordre: cv.sections.length + 1
+      ordre: (cv.sections || []).length + 1
     };
 
-    setCv(prev => ({ ...prev, sections: [...prev.sections, newSection] }));
+    setCv(prev => ({ ...prev, sections: [...(prev.sections || []), newSection] }));
   };
 
   // Delete Section
   const deleteSection = (id: string) => {
-    setCv(prev => ({ ...prev, sections: prev.sections.filter(s => s.id !== id) }));
+    setCv(prev => ({ ...prev, sections: (prev.sections || []).filter(s => s.id !== id) }));
   };
 
   // Update Section Title
   const updateSectionTitle = (id: string, title: string) => {
     setCv(prev => ({
       ...prev,
-      sections: prev.sections.map(s => s.id === id ? { ...s, titre: title } : s)
+      sections: (prev.sections || []).map(s => s.id === id ? { ...s, titre: title } : s)
     }));
   };
 
@@ -432,6 +446,39 @@ export const EditorView: React.FC<EditorViewProps> = ({
               >
                 <Columns className="w-3.5 h-3.5" />
                 <span>2 Col</span>
+              </button>
+            </div>
+
+            {/* AI Career Tools Trigger */}
+            <div className="flex items-center bg-gradient-to-r from-emerald-500/20 via-indigo-500/20 to-blue-500/20 dark:from-emerald-950/50 dark:to-blue-950/50 p-1 rounded-xl border-2 border-emerald-500/40 dark:border-emerald-600/40 gap-1.5 shadow-xs">
+              <button
+                type="button"
+                onClick={() => { setCareerModalTab('offre'); setShowCareerModal(true); }}
+                className="px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs transition-all cursor-pointer ring-1 ring-emerald-400/40"
+                title="Cibler une offre d'emploi (Photo ou Texte)"
+              >
+                <Target className="w-4 h-4 text-emerald-100" />
+                <span className="font-extrabold tracking-tight">Personnaliser pour Offre</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setCareerModalTab('lettre'); setShowCareerModal(true); }}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-indigo-600/10 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer"
+                title="Générer une lettre de motivation"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline font-bold">Lettre de Motivation</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setCareerModalTab('linkedin'); setShowCareerModal(true); }}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-sky-600/10 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 hover:bg-sky-600 hover:text-white transition-all cursor-pointer"
+                title="Générer un profil LinkedIn"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="hidden md:inline font-bold">LinkedIn Pro</span>
               </button>
             </div>
           </div>
@@ -876,7 +923,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           columnFilter === 'gauche' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'
                         }`}
                       >
-                        ◀ Col. Gauche ({cv.sections.filter(s => (s.colonne || 'principale') === 'gauche').length})
+                        ◀ Col. Gauche ({(cv.sections || []).filter(s => (s.colonne || 'principale') === 'gauche').length})
                       </button>
                       <button
                         type="button"
@@ -885,15 +932,15 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           columnFilter === 'droite' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'
                         }`}
                       >
-                        ▶ Col. Droite ({cv.sections.filter(s => (s.colonne || 'principale') === 'droite' || (s.colonne || 'principale') === 'principale').length})
+                        ▶ Col. Droite ({(cv.sections || []).filter(s => (s.colonne || 'principale') === 'droite' || (s.colonne || 'principale') === 'principale').length})
                       </button>
                     </div>
                   )}
                 </div>
 
                 <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-                  <SortableContext items={cv.sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                    {cv.sections
+                  <SortableContext items={(cv.sections || []).map(s => s.id)} strategy={verticalListSortingStrategy}>
+                    {(cv.sections || [])
                       .filter(s => {
                         if (columnFilter === 'gauche') return (s.colonne || 'principale') === 'gauche';
                         if (columnFilter === 'droite') return (s.colonne || 'principale') === 'droite' || (s.colonne || 'principale') === 'principale';
@@ -1882,6 +1929,20 @@ export const EditorView: React.FC<EditorViewProps> = ({
             setCropperImageSrc(null);
           }}
           onCancel={() => setCropperImageSrc(null)}
+        />
+      )}
+
+      {/* AI Career Studio Modal */}
+      {showCareerModal && (
+        <CareerToolsModal
+          isOpen={showCareerModal}
+          onClose={() => setShowCareerModal(false)}
+          cv={cv}
+          langue={langue}
+          initialTab={careerModalTab}
+          onApplyPersonalizedCV={(personalizedCV) => {
+            setCv(personalizedCV);
+          }}
         />
       )}
 

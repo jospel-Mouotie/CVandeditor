@@ -158,7 +158,7 @@ export const CV_TEMPLATES: CVTemplate[] = [
     name: 'Modèle 7 — Célia Naudin (Beige Arch & Étoiles)',
     category: 'creatif',
     description: {
-      fr: 'Colonne gauche beige sable avec arche photo, typographie à étoiles ✨ et pilules de compétences.',
+      fr: 'Colonne gauche beige sable avec arche photo, typographie soignée et pilules de compétences.',
       en: 'Warm sand arch column on left, serif headlines with star icons and skill tag buttons.'
     },
     layoutType: 'celia-beige-arch',
@@ -1341,6 +1341,131 @@ export const CV_TEMPLATES: CVTemplate[] = [
       sectionHeaderStyle: 'boxed',
       skillsDisplayMode: 'grid',
       photoFrameStyle: 'arche',
+      experienceDatesAlignment: 'left'
+    }
+  },
+  {
+    id: 'modele-51',
+    name: 'Modèle 51 — Ingénieur IT Yann Landy (Bleu Tech & Arches)',
+    category: 'technique',
+    description: {
+      fr: 'Design exact Ingénieur IT avec arches géométriques en haut à gauche, en-tête à deux tons, cartes de compétences 3 colonnes et bandeau de contact en pied de page.',
+      en: 'Exact IT Engineer layout with top-left concentric blue arcs, two-tone name, 3-column skill cards, and dark navy bottom contact footer.'
+    },
+    layoutType: 'yann-landy-tech',
+    layoutFamily: 'single-column',
+    supportsSecondaryAccent: true,
+    defaultAccent: '#0F2744',
+    defaultSecondaryAccent: '#0284C7',
+    defaultFont: 'Inter',
+    badgeText: 'Modèle Yann Landy',
+    themeConfig: {
+      primaryColor: '#0F2744',
+      secondaryColor: '#0284C7',
+      backgroundColor: '#FFFFFF',
+      headerStyle: 'tech-arches',
+      sectionHeaderStyle: 'badge-line',
+      skillsDisplayMode: 'tech-cards',
+      experienceDatesAlignment: 'left'
+    }
+  },
+  {
+    id: 'modele-52',
+    name: 'Modèle 52 — Ingénieur IT Yann Landy (Carbone & Or Métallique)',
+    category: 'executif',
+    description: {
+      fr: 'Nuance haut de gamme Noir Carbone et Or Impérial avec arches dorées, cartes de compétences 3 colonnes et bandeau noir en pied de page.',
+      en: 'Executive Carbon Black and Imperial Gold nuance with gold arcs, 3-column skill cards, and footer.'
+    },
+    layoutType: 'yann-landy-tech',
+    layoutFamily: 'single-column',
+    supportsSecondaryAccent: true,
+    defaultAccent: '#18181B',
+    defaultSecondaryAccent: '#D97706',
+    defaultFont: 'Outfit',
+    badgeText: 'Nuance Or & Carbone',
+    themeConfig: {
+      primaryColor: '#18181B',
+      secondaryColor: '#D97706',
+      backgroundColor: '#FFFFFF',
+      headerStyle: 'tech-arches',
+      sectionHeaderStyle: 'badge-line',
+      skillsDisplayMode: 'tech-cards',
+      experienceDatesAlignment: 'left'
+    }
+  },
+  {
+    id: 'modele-53',
+    name: 'Modèle 53 — Ingénieur IT Yann Landy (Émeraude & Menthe)',
+    category: 'technique',
+    description: {
+      fr: 'Nuance Vert Forêt et Menthe fraîche idéale pour ingénieurs Cloud, Fintech, GreenTech et DevOps.',
+      en: 'Emerald Green and Mint Teal nuance for Cloud, Fintech, GreenTech and DevOps engineers.'
+    },
+    layoutType: 'yann-landy-tech',
+    layoutFamily: 'single-column',
+    supportsSecondaryAccent: true,
+    defaultAccent: '#064E3B',
+    defaultSecondaryAccent: '#0D9488',
+    defaultFont: 'Inter',
+    badgeText: 'Nuance Émeraude',
+    themeConfig: {
+      primaryColor: '#064E3B',
+      secondaryColor: '#0D9488',
+      backgroundColor: '#FFFFFF',
+      headerStyle: 'tech-arches',
+      sectionHeaderStyle: 'badge-line',
+      skillsDisplayMode: 'tech-cards',
+      experienceDatesAlignment: 'left'
+    }
+  },
+  {
+    id: 'modele-54',
+    name: 'Modèle 54 — Ingénieur IT Yann Landy (Indigo Cyber & Cobalt)',
+    category: 'technique',
+    description: {
+      fr: 'Nuance Indigo profond et Bleu Cobalt électrique pour ingénieurs Cybersécurité, Intelligence Artificielle et Systèmes.',
+      en: 'Deep Indigo and Cobalt Blue nuance for Cybersecurity, AI and Systems engineers.'
+    },
+    layoutType: 'yann-landy-tech',
+    layoutFamily: 'single-column',
+    supportsSecondaryAccent: true,
+    defaultAccent: '#1E1B4B',
+    defaultSecondaryAccent: '#6366F1',
+    defaultFont: 'Inter',
+    badgeText: 'Nuance Cyber Indigo',
+    themeConfig: {
+      primaryColor: '#1E1B4B',
+      secondaryColor: '#6366F1',
+      backgroundColor: '#FFFFFF',
+      headerStyle: 'tech-arches',
+      sectionHeaderStyle: 'badge-line',
+      skillsDisplayMode: 'tech-cards',
+      experienceDatesAlignment: 'left'
+    }
+  },
+  {
+    id: 'modele-55',
+    name: 'Modèle 55 — Ingénieur IT Yann Landy (Bordeaux & Ambre Direction)',
+    category: 'moderne',
+    description: {
+      fr: 'Nuance Bordeaux Royal et Ambre Corail pour Directeurs de Projets, Lead Tech et Consultants en Stratégie IT.',
+      en: 'Royal Wine Red and Coral Amber nuance for Project Directors, Lead Tech and IT Strategy Consultants.'
+    },
+    layoutType: 'yann-landy-tech',
+    layoutFamily: 'single-column',
+    supportsSecondaryAccent: true,
+    defaultAccent: '#881337',
+    defaultSecondaryAccent: '#E11D48',
+    defaultFont: 'Montserrat',
+    badgeText: 'Nuance Bordeaux',
+    themeConfig: {
+      primaryColor: '#881337',
+      secondaryColor: '#E11D48',
+      backgroundColor: '#FFFFFF',
+      headerStyle: 'tech-arches',
+      sectionHeaderStyle: 'badge-line',
+      skillsDisplayMode: 'tech-cards',
       experienceDatesAlignment: 'left'
     }
   }

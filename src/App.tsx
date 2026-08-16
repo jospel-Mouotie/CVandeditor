@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { User, CV, Language, CVTemplate, Section } from './types';
+import { User, CV, Language, CVTemplate, Section, SavedLetter } from './types';
 import { switchTemplateSafely } from './state/cvActions';
 import { Navbar } from './components/Navbar';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, AppView } from './components/Sidebar';
 import { AuthModal } from './components/AuthModal';
 import { ImportModal } from './components/ImportModal';
 import { PaymentModal } from './components/PaymentModal';
 import { SplashScreen } from './components/SplashScreen';
 import { EditorChoiceModal } from './components/EditorChoiceModal';
 import { EditorTransitionLoader } from './components/EditorTransitionLoader';
+import { CVPickerModal } from './components/CVPickerModal';
+import { DeviceAdviceModal } from './components/DeviceAdviceModal';
 import { LandingView } from './views/LandingView';
 import { DashboardView } from './views/DashboardView';
 import { GalleryView } from './views/GalleryView';
 import { EditorView } from './views/EditorView';
+import { JobTargetingView } from './views/JobTargetingView';
+import { LetterGeneratorView } from './views/LetterGeneratorView';
+import { LettersDashboardView } from './views/LettersDashboardView';
+import { LinkedInGeneratorView } from './views/LinkedInGeneratorView';
 import { AdminPanel } from './components/AdminPanel';
 
 export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [langue, setLangue] = useState<Language>('fr');
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'gallery' | 'editor' | 'admin'>('home');
+  const [currentView, setCurrentView] = useState<AppView>('home');
+  const [dashboardTypeFilter, setDashboardTypeFilter] = useState<'ALL' | 'ORIGINAL' | 'MODIFIED'>('ALL');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
@@ -78,7 +85,9 @@ export default function App() {
   }, []);
 
   const [cvs, setCvs] = useState<CV[]>([]);
+  const [lettersCount, setLettersCount] = useState<number>(0);
   const [activeCV, setActiveCV] = useState<CV | null>(null);
+  const [editingLetter, setEditingLetter] = useState<SavedLetter | null>(null);
   const [editorInitialMode, setEditorInitialMode] = useState<'visual' | 'form'>('form');
   const [paymentModalCV, setPaymentModalCV] = useState<CV | null>(null);
 
@@ -87,6 +96,11 @@ export default function App() {
   const [showEditorChoiceModal, setShowEditorChoiceModal] = useState(false);
   const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
+
+  // CV Picker modal for PDF export
+  const [showCVPicker, setShowCVPicker] = useState(false);
+  const [pendingCareerAction, setPendingCareerAction] = useState<'lettre' | 'linkedin' | 'offre' | 'export' | null>(null);
+  const [showDeviceAdviceModal, setShowDeviceAdviceModal] = useState(false);
 
   // Fetch CVs on mount or user change
   const fetchUserCVs = async () => {
@@ -102,9 +116,55 @@ export default function App() {
     }
   };
 
+  // Fetch Letters count
+  const fetchLettersCount = async () => {
+    try {
+      const userId = user?.id || 'u-demo-1';
+      const res = await fetch(`/api/lettres?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLettersCount(data.letters ? data.letters.length : 0);
+      }
+    } catch (err) {
+      console.error('Error fetching letters count:', err);
+    }
+  };
+
   useEffect(() => {
     fetchUserCVs();
+    fetchLettersCount();
   }, [user]);
+
+  // Handle Action that requires selecting a CV first (like Export PDF)
+  const handleOpenExportPicker = () => {
+    setPendingCareerAction('export');
+    setShowCVPicker(true);
+  };
+
+  const handleSelectCVForExport = (selectedCV: CV) => {
+    setShowCVPicker(false);
+    setActiveCV(selectedCV);
+
+    setLoadingMessage(
+      langue === 'en' ? 'Preparing CV for PDF Export...' :
+      langue === 'ar' ? 'جاري تحضير السيرة الذاتية للتصدير...' :
+      'Préparation du CV pour l\'export PDF...'
+    );
+    setIsEditorLoading(true);
+    setCurrentView('editor');
+    setTimeout(() => setIsEditorLoading(false), 400);
+    setPendingCareerAction(null);
+  };
+
+  // Safe navigation to editor with device advice check
+  const handleNavigateToEditor = () => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      setShowDeviceAdviceModal(true);
+    } else {
+      setShowEditorChoiceModal(true);
+    }
+  };
 
   // Create new CV from Template
   const handleCreateFromTemplate = async (template: CVTemplate, targetMode: 'visual' | 'form' = 'form') => {
@@ -126,7 +186,8 @@ export default function App() {
           langue,
           couleurAccent: template.defaultAccent,
           police: template.defaultFont,
-          isBlank: false
+          isBlank: false,
+          isModified: false
         })
       });
 
@@ -166,7 +227,8 @@ export default function App() {
           langue,
           couleurAccent: '#2563EB',
           police: 'Inter',
-          isBlank: true
+          isBlank: true,
+          isModified: false
         })
       });
 
@@ -199,7 +261,8 @@ export default function App() {
           langue,
           couleurAccent: '#2563EB',
           police: 'Inter',
-          sections
+          sections,
+          isModified: false
         })
       });
 
@@ -364,8 +427,20 @@ export default function App() {
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
         hasActiveCv={!!activeCV}
-        onOpenEditorChoice={() => setShowEditorChoiceModal(true)}
+        onOpenEditorChoice={handleNavigateToEditor}
         onCreateBlankCV={handleCreateBlankCV}
+        onOpenLetterGenerator={() => {
+          setEditingLetter(null);
+          setCurrentView('letter-generator');
+        }}
+        onOpenLinkedInGenerator={() => setCurrentView('linkedin')}
+        onOpenJobTargeting={() => setCurrentView('job-targeting')}
+        onOpenExportPDF={handleOpenExportPicker}
+        onOpenModifiedCVs={() => {
+          setDashboardTypeFilter('MODIFIED');
+          setCurrentView('dashboard');
+        }}
+        onOpenLettersDashboard={() => setCurrentView('letters')}
       />
 
       {/* Header Bar with Toggle */}
@@ -393,6 +468,12 @@ export default function App() {
             onBrowseTemplates={() => setCurrentView('gallery')}
             onImportClick={() => setShowImportModal(true)}
             onCreateBlankCV={handleCreateBlankCV}
+            onOpenLetterGenerator={() => {
+              setEditingLetter(null);
+              setCurrentView('letter-generator');
+            }}
+            onOpenLinkedInGenerator={() => setCurrentView('linkedin')}
+            onOpenJobTargeting={() => setCurrentView('job-targeting')}
           />
         )}
 
@@ -400,6 +481,8 @@ export default function App() {
           <DashboardView
             cvs={cvs}
             langue={langue}
+            lettersCount={lettersCount}
+            initialTypeFilter={dashboardTypeFilter}
             onCreateNew={() => setCurrentView('gallery')}
             onCreateBlankCV={handleCreateBlankCV}
             onImportClick={() => setShowImportModal(true)}
@@ -422,6 +505,78 @@ export default function App() {
                 setPaymentModalCV(cv);
               }
             }}
+            onGoToLetters={() => setCurrentView('letters')}
+            onGoToJobTargeting={() => setCurrentView('job-targeting')}
+            onGoToLetterGenerator={() => {
+              setEditingLetter(null);
+              setCurrentView('letter-generator');
+            }}
+            onGoToLinkedIn={() => setCurrentView('linkedin')}
+          />
+        )}
+
+        {/* Dedicated Page: Mes Lettres de Motivation */}
+        {currentView === 'letters' && (
+          <LettersDashboardView
+            cvs={cvs}
+            langue={langue}
+            onEditLetter={(letter) => {
+              setEditingLetter(letter);
+              setCurrentView('letter-generator');
+            }}
+            onCreateNewLetter={() => {
+              setEditingLetter(null);
+              setCurrentView('letter-generator');
+            }}
+            onGoToJobTargeting={() => setCurrentView('job-targeting')}
+            onGoToDashboard={() => setCurrentView('dashboard')}
+          />
+        )}
+
+        {/* Dedicated Page: Générateur & Éditeur de Lettre de Motivation */}
+        {currentView === 'letter-generator' && (
+          <LetterGeneratorView
+            cvs={cvs}
+            activeCV={activeCV}
+            langue={langue}
+            letterToEdit={editingLetter}
+            onLetterSaved={() => {
+              fetchLettersCount();
+            }}
+            onGoToDashboard={() => setCurrentView('dashboard')}
+            onGoToLettersDashboard={() => {
+              fetchLettersCount();
+              setCurrentView('letters');
+            }}
+          />
+        )}
+
+        {/* Dedicated Page: Cibler une Offre d'Emploi */}
+        {currentView === 'job-targeting' && (
+          <JobTargetingView
+            cvs={cvs}
+            activeCV={activeCV}
+            langue={langue}
+            onCVPersonalized={(newCv) => {
+              fetchUserCVs();
+              setActiveCV(newCv);
+              setCurrentView('editor');
+            }}
+            onLetterGenerated={() => {
+              fetchLettersCount();
+              setCurrentView('letters');
+            }}
+            onGoToDashboard={() => setCurrentView('dashboard')}
+          />
+        )}
+
+        {/* Dedicated Page: Optimisation Profil LinkedIn */}
+        {currentView === 'linkedin' && (
+          <LinkedInGeneratorView
+            cvs={cvs}
+            activeCV={activeCV}
+            langue={langue}
+            onGoToDashboard={() => setCurrentView('dashboard')}
           />
         )}
 
@@ -502,6 +657,35 @@ export default function App() {
             setEditorInitialMode('form');
             setCurrentView('editor');
             setTimeout(() => setIsEditorLoading(false), 400);
+          }}
+        />
+      )}
+
+      {/* Device Ergonomics Advice Modal */}
+      {showDeviceAdviceModal && (
+        <DeviceAdviceModal
+          isOpen={showDeviceAdviceModal}
+          onClose={() => setShowDeviceAdviceModal(false)}
+          onContinue={() => setShowEditorChoiceModal(true)}
+          langue={langue}
+        />
+      )}
+
+      {/* CV Picker Modal for PDF Export */}
+      {showCVPicker && (
+        <CVPickerModal
+          isOpen={showCVPicker}
+          onClose={() => {
+            setShowCVPicker(false);
+            setPendingCareerAction(null);
+          }}
+          cvs={cvs}
+          langue={langue}
+          actionType={pendingCareerAction || 'export'}
+          onSelectCV={handleSelectCVForExport}
+          onCreateNewCV={() => {
+            setShowCVPicker(false);
+            setShowEditorChoiceModal(true);
           }}
         />
       )}

@@ -777,12 +777,12 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { id: 'badges', label: '🏷️ Badges Pilules' },
-                        { id: 'progress', label: '📊 Jauges / Barres' },
-                        { id: 'stars', label: '⭐ Étoiles (1-5)' },
-                        { id: 'grid', label: '🔳 Grille Moderne' },
-                        { id: 'tags', label: '#️⃣ Tags Colorés' },
-                        { id: 'list', label: '📋 Liste à Puces' }
+                        { id: 'badges', label: 'Badges Pilules' },
+                        { id: 'progress', label: 'Jauges / Barres' },
+                        { id: 'stars', label: 'Étoiles (1-5)' },
+                        { id: 'grid', label: 'Grille Moderne' },
+                        { id: 'tags', label: 'Tags Colorés' },
+                        { id: 'list', label: 'Liste à Puces' }
                       ].map((style) => (
                         <button
                           key={style.id}
@@ -1221,7 +1221,7 @@ export const FormWizard: React.FC<FormWizardProps> = ({
                   const newI: InteretItem = {
                     id: `int-${Date.now()}`,
                     nom: 'Nouvelle passion',
-                    icone: '🎯'
+                    icone: ''
                   };
                   updateInt([...intList, newI]);
                 };
@@ -1529,35 +1529,122 @@ export const FormWizard: React.FC<FormWizardProps> = ({
               </div>
             </div>
 
-            {/* 4. Forme de Photo & Style d'En-tête */}
-            <div className="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-3">
+            {/* 4. Forme & Configuration Complète de la Photo */}
+            <div className="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs space-y-4">
               <label className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
                 <Camera className="w-4 h-4 text-indigo-600" />
-                <span>Forme & Style de la Photo</span>
+                <span>{langue === 'en' ? 'Profile Photo Customization' : 'Personnalisation Complète de la Photo'}</span>
               </label>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                {[
-                  { id: 'ronde', label: 'Ronde' },
-                  { id: 'carree', label: 'Carrée' },
-                  { id: 'arrondie', label: 'Arrondie' },
-                  { id: 'arche', label: 'Arche' },
-                  { id: 'hexagone', label: 'Hexagone' },
-                  { id: 'galet', label: 'Galet' }
-                ].map((shape) => (
+              {/* Photo Size Slider */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
+                  <span>{langue === 'en' ? 'Photo Size :' : 'Taille de la photo :'}</span>
+                  <span className="text-blue-600 font-mono font-black">{cv.photoTaillePx || 80} px</span>
+                </div>
+                <input
+                  type="range"
+                  min="40"
+                  max="160"
+                  step="2"
+                  value={cv.photoTaillePx || 80}
+                  onChange={(e) => onChangeCV({ ...cv, photoTaillePx: parseInt(e.target.value) })}
+                  className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                />
+              </div>
+
+              {/* Photo Position */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">
+                  {langue === 'en' ? 'Photo Placement :' : 'Emplacement de la photo :'}
+                </span>
+                <div className="grid grid-cols-2 gap-2">
                   <button
-                    key={shape.id}
                     type="button"
-                    onClick={() => onChangeCV({ ...cv, photoForme: shape.id as any })}
-                    className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
-                      (cv.photoForme || 'ronde') === shape.id
+                    onClick={() => onChangeCV({ ...cv, photoPosition: 'in-header' })}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      (cv.photoPosition || 'in-header') === 'in-header'
                         ? 'bg-blue-600 text-white border-blue-600'
-                        : 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        : 'bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    {shape.label}
+                    Dans l'En-tête (Top)
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => onChangeCV({ ...cv, photoPosition: 'in-sidebar' })}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      cv.photoPosition === 'in-sidebar'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-slate-50 dark:bg-slate-900 text-slate-600 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    Dans la Sidebar
+                  </button>
+                </div>
+              </div>
+
+              {/* Photo Shapes */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">
+                  {langue === 'en' ? 'Photo Shape :' : 'Forme de la photo :'}
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[
+                    { id: 'ronde', label: 'Ronde' },
+                    { id: 'carree', label: 'Carrée' },
+                    { id: 'arrondie', label: 'Arrondie' },
+                    { id: 'arche', label: 'Arche' },
+                    { id: 'hexagone', label: 'Hexagone' },
+                    { id: 'galet', label: 'Galet' }
+                  ].map((shape) => (
+                    <button
+                      key={shape.id}
+                      type="button"
+                      onClick={() => onChangeCV({ ...cv, photoForme: shape.id as any })}
+                      className={`py-2 px-1 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                        (cv.photoForme || 'ronde') === shape.id
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                      }`}
+                    >
+                      {shape.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Border Thickness & Color */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100 dark:border-slate-800">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    <span>Épaisseur de bordure :</span>
+                    <span className="text-blue-600 font-mono">{cv.photoBordureEpaisseur ?? 2} px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={cv.photoBordureEpaisseur ?? 2}
+                    onChange={(e) => onChangeCV({ ...cv, photoBordureEpaisseur: parseInt(e.target.value) })}
+                    className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">Couleur de bordure :</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={cv.photoBordureCouleur || '#FFFFFF'}
+                      onChange={(e) => onChangeCV({ ...cv, photoBordureCouleur: e.target.value })}
+                      className="w-7 h-7 rounded-lg cursor-pointer border border-slate-300"
+                    />
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+                      {cv.photoBordureCouleur || '#FFFFFF'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 

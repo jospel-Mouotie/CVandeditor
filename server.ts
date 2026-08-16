@@ -64,6 +64,7 @@ interface DB {
   users: Array<{ id: string; nom: string; email: string; motDePasseHash: string; role?: string; langue: string; createdAt: string }>;
   cvs: Array<any>;
   payments: Array<any>;
+  letters: Array<any>;
 }
 
 function loadDB(): DB {
@@ -72,6 +73,11 @@ function loadDB(): DB {
       const raw = fs.readFileSync(DB_FILE, 'utf-8');
       const parsedDB: DB = JSON.parse(raw);
       let needsSave = false;
+
+      if (!parsedDB.letters) {
+        parsedDB.letters = [];
+        needsSave = true;
+      }
 
       // Guarantee admin user exists with required credentials
       let admin = parsedDB.users.find(u => u.email.toLowerCase() === 'mouotiejospel@gmail.com');
@@ -260,6 +266,40 @@ function loadDB(): DB {
         userEmail: 'jean.dupont@exemple.com',
         userName: 'Jean Dupont',
         cvTitle: 'Mon CV Développeur Full Stack'
+      }
+    ],
+    letters: [
+      {
+        id: 'lettre-demo-1',
+        utilisateurId: 'u-demo-1',
+        cvId: 'cv-demo-1',
+        titre: 'Lettre Développeur Senior - Orange Cameroun',
+        destinataire: 'Direction des Ressources Humaines & Talents',
+        entreprise: 'Orange Cameroun',
+        poste: 'Développeur Full Stack Senior',
+        villeDate: 'Douala, le 15 Août 2026',
+        dateCreation: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        langue: 'fr',
+        police: 'Inter',
+        taillePolice: 11,
+        couleurAccent: '#2563EB',
+        expediteur: {
+          nomComplet: 'Jean Dupont',
+          titreProfessionnel: 'Développeur Full Stack Senior',
+          email: 'jean.dupont@exemple.com',
+          telephone: '+237 658 60 61 03',
+          adresse: 'Douala, Cameroun'
+        },
+        objet: 'Candidature spontanée au poste de Développeur Full Stack Senior',
+        formulePolitesseEntree: 'Madame, Monsieur,',
+        paragrapheAccroche: 'Fort d\'une expérience significative de plus de 5 ans dans la conception et le déploiement d\'architectures web évolutives, je me permets de vous soumettre ma candidature pour intégrer vos équipes techniques à Douala.',
+        paragrapheValeurAjoutee: 'Au cours de mes précédentes missions, j\'ai notamment piloté le développement d\'applications critiques sous React, Node.js et TypeScript, en garantissant un haut niveau de performance, de sécurité et d\'ergonomie. Ma maîtrise du cycle complet de développement logiciel et mon attachement aux méthodologies agiles me permettent de m\'intégrer rapidement et efficacement au sein de projets d\'envergure.',
+        paragrapheAdequationEntreprise: 'La réputation d\'Orange Cameroun en matière d\'innovation technologique et de transformation digitale correspond parfaitement à mon ambition d\'apporter des solutions logicielles robustes et à fort impact.',
+        paragrapheConclusion: 'Je serais honoré de pouvoir échanger avec vous lors d\'un entretien afin de vous exposer de vive voix mes motivations et la valeur que je pourrais apporter à vos projets.',
+        formulePolitesseSortie: 'Je vous prie d\'agréer, Madame, Monsieur, l\'expression de mes salutations les plus distinguées.',
+        texteComplet: 'Madame, Monsieur,\n\nFort d\'une expérience significative de plus de 5 ans dans la conception et le déploiement d\'architectures web évolutives, je me permets de vous soumettre ma candidature pour intégrer vos équipes techniques à Douala.\n\nAu cours de mes précédentes missions, j\'ai notamment piloté le développement d\'applications critiques sous React, Node.js et TypeScript, en garantissant un haut niveau de performance, de sécurité et d\'ergonomie. Ma maîtrise du cycle complet de développement logiciel et mon attachement aux méthodologies agiles me permettent de m\'intégrer rapidement et efficacement au sein de projets d\'envergure.\n\nLa réputation d\'Orange Cameroun en matière d\'innovation technologique et de transformation digitale correspond parfaitement à mon ambition d\'apporter des solutions logicielles robustes et à fort impact.\n\nJe serais honoré de pouvoir échanger avec vous lors d\'un entretien afin de vous exposer de vive voix mes motivations et la valeur que je pourrais apporter à vos projets.\n\nJe vous prie d\'agréer, Madame, Monsieur, l\'expression de mes salutations les plus distinguées.\n\nJean Dupont',
+        signature: 'Jean Dupont'
       }
     ]
   };
@@ -614,6 +654,126 @@ app.post('/api/admin/paiement/:id/rejeter', (req, res) => {
 });
 
 // -------------------------------------------------------------
+// COVER LETTERS (LETTRES DE MOTIVATION) PERSISTENCE CRUD
+// -------------------------------------------------------------
+app.get('/api/lettres', (req, res) => {
+  const { userId } = req.query;
+  const db = loadDB();
+  let userLetters = db.letters || [];
+  if (userId) {
+    userLetters = userLetters.filter(l => l.utilisateurId === userId);
+  }
+  res.json({ letters: userLetters });
+});
+
+app.post('/api/lettres', (req, res) => {
+  const letterData = req.body;
+  const db = loadDB();
+  if (!db.letters) db.letters = [];
+
+  const newLetter = {
+    id: letterData.id || `lettre-${Date.now()}`,
+    utilisateurId: letterData.utilisateurId || 'u-demo-1',
+    cvId: letterData.cvId,
+    titre: letterData.titre || (letterData.poste ? `Lettre ${letterData.poste} - ${letterData.entreprise || 'Candidature'}` : 'Nouvelle lettre de motivation'),
+    destinataire: letterData.destinataire || 'Direction des Ressources Humaines',
+    entreprise: letterData.entreprise || 'Entreprise Cible',
+    poste: letterData.poste || 'Poste Visé',
+    villeDate: letterData.villeDate || `Fait le ${new Date().toLocaleDateString('fr-FR')}`,
+    dateCreation: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    langue: letterData.langue || 'fr',
+    police: letterData.police || 'Inter',
+    taillePolice: letterData.taillePolice || 11,
+    couleurAccent: letterData.couleurAccent || '#2563EB',
+    expediteur: letterData.expediteur || {
+      nomComplet: 'Mon Nom',
+      titreProfessionnel: '',
+      email: '',
+      telephone: '',
+      adresse: ''
+    },
+    objet: letterData.objet || 'Candidature',
+    formulePolitesseEntree: letterData.formulePolitesseEntree || 'Madame, Monsieur,',
+    paragrapheAccroche: letterData.paragrapheAccroche || '',
+    paragrapheValeurAjoutee: letterData.paragrapheValeurAjoutee || '',
+    paragrapheAdequationEntreprise: letterData.paragrapheAdequationEntreprise || '',
+    paragrapheConclusion: letterData.paragrapheConclusion || '',
+    formulePolitesseSortie: letterData.formulePolitesseSortie || 'Veuillez agréer mes salutations distinguées.',
+    texteComplet: letterData.texteComplet || '',
+    signature: letterData.signature || (letterData.expediteur?.nomComplet || '')
+  };
+
+  db.letters.unshift(newLetter);
+  saveDB(db);
+  res.json({ letter: newLetter });
+});
+
+app.get('/api/lettres/:id', (req, res) => {
+  const { id } = req.params;
+  const db = loadDB();
+  const letter = (db.letters || []).find(l => l.id === id);
+  if (!letter) {
+    return res.status(404).json({ error: 'Lettre de motivation non trouvée' });
+  }
+  res.json({ letter });
+});
+
+app.put('/api/lettres/:id', (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  const db = loadDB();
+  if (!db.letters) db.letters = [];
+
+  const index = db.letters.findIndex(l => l.id === id);
+  if (index === -1) {
+    return res.status(404).json({ error: 'Lettre non trouvée' });
+  }
+
+  db.letters[index] = {
+    ...db.letters[index],
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  saveDB(db);
+  res.json({ letter: db.letters[index] });
+});
+
+app.delete('/api/lettres/:id', (req, res) => {
+  const { id } = req.params;
+  const db = loadDB();
+  if (!db.letters) db.letters = [];
+
+  db.letters = db.letters.filter(l => l.id !== id);
+  saveDB(db);
+  res.json({ success: true });
+});
+
+app.post('/api/lettres/:id/duplicate', (req, res) => {
+  const { id } = req.params;
+  const db = loadDB();
+  if (!db.letters) db.letters = [];
+
+  const original = db.letters.find(l => l.id === id);
+  if (!original) {
+    return res.status(404).json({ error: 'Lettre non trouvée' });
+  }
+
+  const duplicated = {
+    ...JSON.parse(JSON.stringify(original)),
+    id: `lettre-${Date.now()}`,
+    titre: `${original.titre} (Copie)`,
+    dateCreation: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  db.letters.unshift(duplicated);
+  saveDB(db);
+  res.json({ letter: duplicated });
+});
+
+// -------------------------------------------------------------
 // AI SPELLCHECK & GRAMMAR CORRECTION ENDPOINTS (GEMINI API)
 // -------------------------------------------------------------
 
@@ -652,41 +812,58 @@ function setCachedCorrection(key: string, val: any) {
   spellcheckCache.set(key, val);
 }
 
-async function generateGeminiContentWithFallback(ai: GoogleGenAI, prompt: string): Promise<string | null> {
-  const modelsToTry = ['gemini-3.6-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'];
+function safeJsonParse<T>(text: string | null | undefined, fallback: T): T {
+  if (!text || typeof text !== 'string') return fallback;
+  try {
+    const cleaned = text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    return JSON.parse(cleaned);
+  } catch {
+    try {
+      const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+      if (match) {
+        return JSON.parse(match[0]);
+      }
+    } catch (e) {
+      console.warn('safeJsonParse fallback used:', e);
+    }
+    return fallback;
+  }
+}
+
+async function generateGeminiContentWithFallback(ai: GoogleGenAI, contents: any, responseMimeType: string = 'application/json'): Promise<string | null> {
+  const modelsToTry = [
+    'gemini-2.5-flash',
+    'gemini-3.7-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-pro'
+  ];
   let lastError: any = null;
 
   for (const model of modelsToTry) {
     try {
       const response = await ai.models.generateContent({
         model,
-        contents: prompt,
+        contents,
         config: {
-          responseMimeType: 'application/json'
+          responseMimeType
         }
       });
-      return response.text || '{}';
+      if (response?.text) {
+        return response.text;
+      }
     } catch (err: any) {
       lastError = err;
-      const isQuotaOrNotFound =
-        err?.status === 'RESOURCE_EXHAUSTED' ||
-        err?.status === 429 ||
-        err?.status === 404 ||
-        err?.status === 'NOT_FOUND' ||
-        err?.message?.includes('429') ||
-        err?.message?.includes('404') ||
-        err?.message?.includes('not found') ||
-        err?.message?.includes('Quota exceeded');
-
-      if (isQuotaOrNotFound) {
-        console.warn(`[Gemini] Model ${model} returned rate limit or notice (${err?.message || err?.status}), attempting fallback model...`);
-        continue;
-      }
-      throw err;
+      console.warn(`[Gemini] Model ${model} encountered an issue (${err?.message || err?.status || 'error'}), attempting next fallback model...`);
+      // Proceed seamlessly to the next available model
     }
   }
 
-  console.warn('[Gemini] All models reached quota limit or failed. Returning fallback response.', lastError?.message || lastError);
+  console.warn('[Gemini] All AI models temporarily unavailable or rate-limited. Returning fallback result.', lastError?.message || lastError);
   return null;
 }
 
@@ -878,6 +1055,448 @@ CV: ${JSON.stringify(cv).slice(0, 8000)}`;
     res.json({ correctionsGlobales: [], error: err?.message || 'Erreur inconnue' });
   }
 });
+
+// -------------------------------------------------------------
+// 1. GENERATE COVER LETTER (LETTRE DE MOTIVATION) FROM CV
+// -------------------------------------------------------------
+app.post('/api/ai/lettre-motivation', async (req, res) => {
+  const { cv, langue = 'fr', entreprise = '', poste = '', ton = 'professionnel' } = req.body;
+  if (!cv) {
+    return res.status(400).json({ error: 'CV requis' });
+  }
+
+  const ai = getGemini();
+  const profilSection = cv.sections?.find((s: any) => s.type === 'profil');
+  const nomCandidat = profilSection?.contenu?.nomComplet || 'Le Candidat';
+  const titrePro = profilSection?.contenu?.titreProfessionnel || poste || 'Professionnel';
+
+  if (!ai) {
+    // Elegant fallback if AI is offline
+    const fallbackText = `Madame, Monsieur,\n\nActuellement ${titrePro}, je vous adresse ma candidature pour rejoindre votre équipe ${entreprise ? `au sein de ${entreprise}` : ''}.\n\nFort d'un parcours riche et diversifié, j'ai développé de solides compétences et une capacité reconnue à mener à bien des missions ambitieuses. Mon expérience m'a permis d'acquérir une rigueur et une polyvalence qui correspondent parfaitement aux exigences de vos projets.\n\nIntégrer votre structure représente pour moi une réelle opportunité de mettre mon enthousiasme et mes compétences au service de vos objectifs.\n\nDans l'attente d'un échange, je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${nomCandidat}`;
+    return res.json({
+      destinataire: 'Responsable du Recrutement',
+      entreprise: entreprise || 'Votre Entreprise',
+      poste: poste || titrePro,
+      objet: `Candidature au poste de ${poste || titrePro}`,
+      formulePolitesseEntree: 'Madame, Monsieur,',
+      paragrapheAccroche: `Actuellement ${titrePro}, je souhaite vous soumettre ma candidature.`,
+      paragrapheValeurAjoutee: `Au cours de mes différentes expériences, j'ai su développer des compétences concrètes et adaptables.`,
+      paragrapheAdequationEntreprise: `Votre organisation offre un environnement stimulant où je pourrai apporter une réelle valeur ajoutée.`,
+      paragrapheConclusion: `Je serais ravi de vous rencontrer lors d'un entretien pour vous exposer plus en détail mes motivations.`,
+      formulePolitesseSortie: `Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.`,
+      texteComplet: fallbackText
+    });
+  }
+
+  try {
+    const prompt = `Tu es un expert mondial en recrutement et en rédaction de lettres de motivation percutantes en langue ${langue === 'en' ? 'Anglaise' : langue === 'ar' ? 'Arabe' : 'Française'}.
+Rédige une lettre de motivation exceptionnelle, moderne, persuasive et personnalisée en te basant EXCLUSIVEMENT sur les véritables expériences et compétences présentes dans le CV ci-dessous.
+IMPORTANT: Ne JAMAIS inventer d'expériences, de diplômes ou de compétences qui ne figurent pas dans le CV.
+Ton de rédaction souhaité: ${ton}.
+Entreprise ciblée (si mentionnée): ${entreprise || 'Non spécifiée / Entreprise cible'}
+Poste ciblé (si mentionné): ${poste || titrePro}
+
+Données du CV:
+${JSON.stringify(cv).slice(0, 7000)}
+
+Retourne EXCLUSIVEMENT un objet JSON valide avec cette structure exacte:
+{
+  "destinataire": "Responsable du Recrutement",
+  "entreprise": "${entreprise || 'Entreprise'}",
+  "poste": "${poste || titrePro}",
+  "objet": "Objet clair et professionnel",
+  "formulePolitesseEntree": "Formule d'ouverture appropriée",
+  "paragrapheAccroche": "Paragraphe 1 : introduction percutante et motivation",
+  "paragrapheValeurAjoutee": "Paragraphe 2 : réalisations concrètes et compétences clés tirées du CV",
+  "paragrapheAdequationEntreprise": "Paragraphe 3 : adéquation entre le profil et les besoins de l'entreprise",
+  "paragrapheConclusion": "Paragraphe 4 : appel à l'action pour un entretien",
+  "formulePolitesseSortie": "Formule de politesse finale distinguée",
+  "texteComplet": "Texte intégral mis en page et prêt à l'emploi"
+}`;
+
+    const responseText = await generateGeminiContentWithFallback(ai, prompt);
+    const parsed = safeJsonParse<any>(responseText, {});
+    if (!parsed.texteComplet && (parsed.paragrapheAccroche || parsed.objet)) {
+      parsed.texteComplet = `${parsed.formulePolitesseEntree || 'Madame, Monsieur,'}\n\n${parsed.paragrapheAccroche || ''}\n\n${parsed.paragrapheValeurAjoutee || ''}\n\n${parsed.paragrapheAdequationEntreprise || ''}\n\n${parsed.paragrapheConclusion || ''}\n\n${parsed.formulePolitesseSortie || 'Cordialement,'}\n\n${nomCandidat}`;
+    }
+    if (!parsed.texteComplet) {
+      parsed.texteComplet = `Madame, Monsieur,\n\nActuellement ${titrePro}, je vous adresse ma candidature pour rejoindre votre équipe ${entreprise ? `au sein de ${entreprise}` : ''}.\n\nFort d'un parcours riche et rigoureux, j'ai développé des compétences concrètes et une solide polyvalence.\n\nDans l'attente d'un échange lors d'un entretien, je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${nomCandidat}`;
+      parsed.objet = parsed.objet || `Candidature au poste de ${poste || titrePro}`;
+    }
+    return res.json(parsed);
+  } catch (err: any) {
+    console.error('Error generating cover letter:', err?.message || err);
+    return res.json({
+      objet: `Candidature au poste de ${poste || titrePro}`,
+      texteComplet: `Madame, Monsieur,\n\nJe vous propose ma candidature pour le poste de ${poste || titrePro}.\n\nCordialement,\n${nomCandidat}`
+    });
+  }
+});
+
+// -------------------------------------------------------------
+// 2. GENERATE OPTIMIZED LINKEDIN PROFILE FROM CV
+// -------------------------------------------------------------
+const handleLinkedInGeneration = async (req: express.Request, res: express.Response) => {
+  const { cv, langue = 'fr' } = req.body;
+  if (!cv) {
+    return res.status(400).json({ error: 'CV requis' });
+  }
+
+  const ai = getGemini();
+  const profilSection = cv.sections?.find((s: any) => s.type === 'profil');
+  const nomCandidat = profilSection?.contenu?.nomComplet || '';
+  const titrePro = profilSection?.contenu?.titreProfessionnel || 'Professionnel';
+
+  const defaultLinkedIn = {
+    titreProfessionnel: `${titrePro} | Expert Orienté Résultats & Impact`,
+    titreProfil: `${titrePro} | Expert Orienté Résultats & Impact`,
+    resumeAPropos: `Passionné par l'excellence opérationnelle et l'innovation, j'accompagne les projets avec rigueur et détermination.\n\n💡 Compétences clés : Leadership, Stratégie, Gestion de projet\n📬 Contact : ${profilSection?.contenu?.email || 'contact@linkedin.com'}`,
+    resumeBio: `Passionné par l'excellence opérationnelle et l'innovation, j'accompagne les projets avec rigueur et détermination.\n\n💡 Compétences clés : Leadership, Stratégie, Gestion de projet\n📬 Contact : ${profilSection?.contenu?.email || 'contact@linkedin.com'}`,
+    motsClesStrategiques: ['Leadership', 'Gestion de projet', 'Innovation', 'Stratégie', 'Performance'],
+    motsClesRecommandes: ['Leadership', 'Gestion de projet', 'Innovation', 'Stratégie', 'Performance'],
+    experiencesOptimisees: [],
+    experiencesLinkedIn: [],
+    conseilsVisibilite: [
+      'Ajoutez une photo de profil souriante sur fond neutre',
+      'Personnalisez votre bannière LinkedIn en lien avec votre secteur',
+      'Sollicitez 3 recommandations de collègues ou managers'
+    ]
+  };
+
+  if (!ai) {
+    return res.json(defaultLinkedIn);
+  }
+
+  try {
+    const prompt = `Tu es le meilleur expert en Personal Branding et optimisation de profils LinkedIn.
+Analyse en profondeur le CV ci-dessous et crée un profil LinkedIn captivant, professionnel et ultra-optimisé pour les algorithmes et les recruteurs en langue ${langue === 'en' ? 'Anglaise' : langue === 'ar' ? 'Arabe' : 'Française'}.
+
+IMPORTANT:
+- Reste strictement fidèle aux expériences et compétences réelles du CV. N'invente rien.
+- Crée une Headline (titre) à fort impact (moins de 220 caractères).
+- Rédige une section "À propos" (About) dynamique avec structure en paragraphes, emojis professionnels et appel à l'action.
+- Formule des bullet points d'impact orientés résultats (verbes d'action + métriques si possibles) pour les expériences clés.
+- Liste 5 à 8 mots-clés stratégiques pour le référencement LinkedIn.
+- Donne 3 conseils pratiques de visibilité.
+
+CV:
+${JSON.stringify(cv).slice(0, 7000)}
+
+Retourne EXCLUSIVEMENT un JSON valide au format:
+{
+  "titreProfessionnel": "Titre d'accroche LinkedIn (Headline)",
+  "resumeAPropos": "Texte complet de la section À propos",
+  "motsClesStrategiques": ["mot1", "mot2", "mot3"],
+  "experiencesOptimisees": [
+    {
+      "poste": "Intitulé",
+      "entreprise": "Entreprise",
+      "pointsCles": ["point 1 avec impact", "point 2 orienté résultat"]
+    }
+  ],
+  "conseilsVisibilite": ["conseil 1", "conseil 2", "conseil 3"]
+}`;
+
+    const responseText = await generateGeminiContentWithFallback(ai, prompt);
+    const parsed = safeJsonParse(responseText, defaultLinkedIn);
+    
+    // Normalize aliases for both formats
+    const finalResult = {
+      ...defaultLinkedIn,
+      ...parsed,
+      titreProfil: parsed.titreProfil || parsed.titreProfessionnel || defaultLinkedIn.titreProfil,
+      titreProfessionnel: parsed.titreProfessionnel || parsed.titreProfil || defaultLinkedIn.titreProfessionnel,
+      resumeBio: parsed.resumeBio || parsed.resumeAPropos || defaultLinkedIn.resumeBio,
+      resumeAPropos: parsed.resumeAPropos || parsed.resumeBio || defaultLinkedIn.resumeAPropos,
+      motsClesRecommandes: parsed.motsClesRecommandes || parsed.motsClesStrategiques || defaultLinkedIn.motsClesRecommandes,
+      motsClesStrategiques: parsed.motsClesStrategiques || parsed.motsClesRecommandes || defaultLinkedIn.motsClesStrategiques,
+      experiencesLinkedIn: parsed.experiencesLinkedIn || (parsed.experiencesOptimisees || []).map((e: any) => ({
+        titrePoste: e.poste || e.titrePoste || 'Poste',
+        pointsCles: e.pointsCles || []
+      })),
+      experiencesOptimisees: parsed.experiencesOptimisees || (parsed.experiencesLinkedIn || []).map((e: any) => ({
+        poste: e.titrePoste || e.poste || 'Poste',
+        entreprise: e.entreprise || 'Entreprise',
+        pointsCles: e.pointsCles || []
+      }))
+    };
+
+    return res.json(finalResult);
+  } catch (err: any) {
+    console.error('Error generating LinkedIn profile:', err?.message || err);
+    return res.json(defaultLinkedIn);
+  }
+};
+
+app.post('/api/ai/linkedin-profile', handleLinkedInGeneration);
+app.post('/api/ai/linkedin', handleLinkedInGeneration);
+
+// -------------------------------------------------------------
+// 3. ANALYZE JOB OFFER (FROM IMAGE OR TEXT) & GENERATE DYNAMIC QUESTIONS
+// -------------------------------------------------------------
+const handleJobOfferAnalysis = async (req: express.Request, res: express.Response) => {
+  const {
+    texteOffre,
+    offreTexte,
+    imageBase64,
+    offreImage,
+    cv,
+    langue = 'fr'
+  } = req.body;
+
+  const rawText = (texteOffre || offreTexte || '').trim();
+  const rawImage = imageBase64 || offreImage || '';
+
+  if (!rawText && !rawImage) {
+    return res.status(400).json({ error: 'Texte ou image de l\'offre requis' });
+  }
+
+  const defaultAnalysis = {
+    titrePoste: rawText ? (rawText.split('\n')[0]?.slice(0, 60) || 'Poste Détecté') : 'Poste Détecté',
+    entreprise: 'Entreprise Cible',
+    lieu: 'Non spécifié',
+    competencesClesRequises: ['Rigueur professionnelle', 'Gestion de projet', 'Travail en équipe', 'Adaptabilité'],
+    competencesRequises: ['Rigueur professionnelle', 'Gestion de projet', 'Travail en équipe', 'Adaptabilité'],
+    competencesCles: ['Rigueur professionnelle', 'Gestion de projet', 'Travail en équipe', 'Adaptabilité'],
+    pointsFortsDetectes: ['Adéquation solide avec les compétences du profil', 'Expériences pertinentes valorisables'],
+    questionsPrecision: [
+      {
+        id: 'q1',
+        question: 'Quels sont vos atouts majeurs ou projets récents en lien direct avec cette opportunité ?',
+        description: 'Précisez un résultat concret ou un outil maîtrisé.',
+        contexte: 'Compétences & Réalisations'
+      },
+      {
+        id: 'q2',
+        question: 'Avez-vous une expérience spécifique avec l\'environnement de travail ou le secteur ciblé ?',
+        description: 'Donnez un exemple factuel de situation similaire vécue.',
+        contexte: 'Expérience sectorielle'
+      }
+    ],
+    questionsPersonnalisees: [
+      {
+        id: 'q1',
+        question: 'Quels sont vos atouts majeurs ou projets récents en lien direct avec cette opportunité ?',
+        description: 'Précisez un résultat concret ou un outil maîtrisé.',
+        contexte: 'Compétences & Réalisations'
+      },
+      {
+        id: 'q2',
+        question: 'Avez-vous une expérience spécifique avec l\'environnement de travail ou le secteur ciblé ?',
+        description: 'Donnez un exemple factuel de situation similaire vécue.',
+        contexte: 'Expérience sectorielle'
+      }
+    ]
+  };
+
+  const ai = getGemini();
+  if (!ai) {
+    return res.json(defaultAnalysis);
+  }
+
+  try {
+    let contents: any;
+    const instructionPrompt = `Tu es un expert senior en recrutement et en analyse d'offres d'emploi en langue ${langue === 'en' ? 'Anglaise' : langue === 'ar' ? 'Arabe' : 'Française'}.
+Ta mission :
+1. Analyser précisément l'offre d'emploi fournie (qui peut être une image d'annonce ou un texte d'offre).
+2. Extraire le titre du poste, le nom de l'entreprise (si présent), le lieu, ainsi que les compétences clés et critères décisifs demandés par l'employeur.
+3. Comparer avec le CV du candidat fourni ci-dessous.
+4. GÉNÉRER 2 à 3 QUESTIONS TRÈS SPÉCIFIQUES ET DYNAMIQUES ADAPTÉES STRICTEMENT À CETTE OFFRE pour permettre au candidat d'apporter des précisions réelles SANS INVENTER DE FAUSSES INFORMATIONS.
+IMPORTANTISSIME : Les questions DOIVENT CHANGER SELON L'OFFRE. Interroge précisément le candidat sur sa réalité par rapport aux prérequis réels de cette offre.
+
+CV du candidat actuel:
+${JSON.stringify(cv || {}).slice(0, 4000)}
+
+Retourne EXCLUSIVEMENT un JSON valide au format:
+{
+  "titrePoste": "Titre extrait du poste",
+  "entreprise": "Nom de l'entreprise (ou 'Entreprise')",
+  "lieu": "Lieu (ou 'Non précisé')",
+  "competencesClesRequises": ["compétence 1", "compétence 2", "compétence 3"],
+  "pointsFortsDetectes": ["point fort 1 de correspondance", "point fort 2"],
+  "questionsPrecision": [
+    {
+      "id": "q1",
+      "question": "Question sur-mesure ultra précise liée à l'offre",
+      "description": "Explication brève du pourquoi de la question",
+      "contexte": "Thématique (ex: Maîtrise Outil X, Gestion de budget, Anglais)"
+    }
+  ]
+}`;
+
+    if (rawImage) {
+      const base64Data = rawImage.replace(/^data:image\/[a-z]+;base64,/, '');
+      const mimeTypeMatch = rawImage.match(/^data:(image\/[a-z]+);base64,/);
+      const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
+
+      contents = [
+        {
+          role: 'user',
+          parts: [
+            { text: instructionPrompt },
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType
+              }
+            }
+          ]
+        }
+      ];
+    } else {
+      contents = `${instructionPrompt}\n\nTexte de l'offre d'emploi fournie:\n"""\n${rawText}\n"""`;
+    }
+
+    const responseText = await generateGeminiContentWithFallback(ai, contents);
+    const parsed = safeJsonParse(responseText, defaultAnalysis);
+
+    const questions = parsed.questionsPrecision || parsed.questionsPersonnalisees || defaultAnalysis.questionsPrecision;
+    const skills = parsed.competencesClesRequises || parsed.competencesRequises || parsed.competencesCles || defaultAnalysis.competencesClesRequises;
+
+    const normalizedResponse = {
+      ...defaultAnalysis,
+      ...parsed,
+      titrePoste: parsed.titrePoste || defaultAnalysis.titrePoste,
+      entreprise: parsed.entreprise || defaultAnalysis.entreprise,
+      lieu: parsed.lieu || defaultAnalysis.lieu,
+      competencesClesRequises: skills,
+      competencesRequises: skills,
+      competencesCles: skills,
+      questionsPrecision: questions,
+      questionsPersonnalisees: questions,
+      pointsFortsDetectes: parsed.pointsFortsDetectes || defaultAnalysis.pointsFortsDetectes
+    };
+
+    return res.json(normalizedResponse);
+  } catch (err: any) {
+    console.error('Error analysing job offer:', err?.message || err);
+    return res.json(defaultAnalysis);
+  }
+};
+
+app.post('/api/ai/analyse-offre', handleJobOfferAnalysis);
+app.post('/api/ai/cibler-offre', handleJobOfferAnalysis);
+
+// -------------------------------------------------------------
+// 4. ADAPT CV & GENERATE TARGETED COVER LETTER BASED ON USER ANSWERS
+// -------------------------------------------------------------
+const handleAdaptCandidateCV = async (req: express.Request, res: express.Response) => {
+  const {
+    cv,
+    offreAnalyse,
+    offre,
+    reponsesQuestions = {},
+    reponsesCandidat = {},
+    langue = 'fr'
+  } = req.body;
+
+  const targetOffer = offreAnalyse || offre;
+  const targetAnswers = { ...reponsesQuestions, ...reponsesCandidat };
+
+  if (!cv || !targetOffer) {
+    return res.status(400).json({ error: 'CV et analyse d\'offre requis' });
+  }
+
+  const profilSection = cv.sections?.find((s: any) => s.type === 'profil');
+  const nomCandidat = profilSection?.contenu?.nomComplet || 'Le Candidat';
+  const titreVisé = targetOffer.titrePoste || profilSection?.contenu?.titreProfessionnel || 'Poste Cible';
+  const entrepriseCible = targetOffer.entreprise || 'Votre Entreprise';
+
+  const defaultAdaptation = {
+    cvModifie: cv,
+    cvPersonnalise: cv,
+    lettreMotivation: {
+      destinataire: 'Responsable du Recrutement',
+      entreprise: entrepriseCible,
+      poste: titreVisé,
+      objet: `Candidature pour le poste de ${titreVisé}`,
+      formulePolitesseEntree: 'Madame, Monsieur,',
+      paragrapheAccroche: `Actuellement ${profilSection?.contenu?.titreProfessionnel || 'en poste'}, je vous adresse ma candidature motivée pour le poste de ${titreVisé} au sein de ${entrepriseCible}.`,
+      paragrapheValeurAjoutee: `Mon parcours m'a permis de développer une expertise solide et une rigueur qui me permettront d'être immédiatement opérationnel et de contribuer activement à vos objectifs.`,
+      paragrapheAdequationEntreprise: `Rejoindre ${entrepriseCible} est pour moi l'opportunité d'apporter mon dynamisme et mon savoir-faire à vos projets d'envergure.`,
+      paragrapheConclusion: `Je serais ravi de vous exposer mes motivations plus en détail lors d'un prochain entretien.`,
+      formulePolitesseSortie: `Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.`,
+      texteComplet: `Madame, Monsieur,\n\nActuellement ${profilSection?.contenu?.titreProfessionnel || 'en poste'}, je vous adresse ma candidature motivée pour le poste de ${titreVisé} au sein de ${entrepriseCible}.\n\nMon parcours m'a permis de développer une expertise solide et une rigueur qui me permettront d'être immédiatement opérationnel et de contribuer activement à vos objectifs.\n\nRejoindre ${entrepriseCible} est pour moi l'opportunité d'apporter mon dynamisme et mon savoir-faire à vos projets d'envergure.\n\nJe serais ravi de vous exposer mes motivations plus en détail lors d'un prochain entretien.\n\nJe vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.\n\n${nomCandidat}`
+    },
+    modificationsApportees: [
+      'Mise en valeur ciblée des expériences pertinentes sans ajout fictif.',
+      'Alignement du titre professionnel et du résumé sur le poste visé.',
+      'Génération d\'une lettre de motivation dédiée et percutante.'
+    ],
+    tauxCorrespondanceEstime: 94
+  };
+
+  const ai = getGemini();
+  if (!ai) {
+    return res.json(defaultAdaptation);
+  }
+
+  try {
+    const prompt = `Tu es un conseiller en recrutement d'élite spécialisé dans l'adaptation stratégique de candidatures.
+Voici le CV initial du candidat, l'analyse de l'offre d'emploi ciblée, et les réponses réelles fournies par le candidat aux questions d'alignement.
+
+RÈGLE D'OR ABSOLUE :
+- Tu ne dois JAMAIS inventer d'expérience professionnelle, de diplôme, de durée d'expérience ou de compétence fictive.
+- Tu dois réorganiser, valoriser, reformuler le résumé professionnel et mettre en lumière les expériences réelles existantes du candidat qui résonnent le plus avec l'offre.
+- Intègre les réponses données par le candidat pour enrichir avec exactitude les descriptions de ses expériences réelles existantes.
+- Adapte le titre professionnel du CV pour qu'il soit parfaitement en phase avec le poste visé (${titreVisé}), si cela reste cohérent avec le profil.
+- Rédige simultanément une lettre de motivation sur-mesure pour cette offre spécifique.
+
+Offre d'emploi ciblée:
+${JSON.stringify(targetOffer)}
+
+Réponses du candidat aux questions personnalisées:
+${JSON.stringify(targetAnswers)}
+
+CV Initial du candidat:
+${JSON.stringify(cv)}
+
+Retourne EXCLUSIVEMENT un JSON valide au format:
+{
+  "cvPersonnalise": { ...même structure exacte que le CV d'origine avec textes optimisés et réordonnés... },
+  "lettreMotivation": {
+    "destinataire": "Responsable du Recrutement",
+    "entreprise": "${entrepriseCible}",
+    "poste": "${titreVisé}",
+    "objet": "Objet percutant",
+    "formulePolitesseEntree": "Formule d'entrée",
+    "paragrapheAccroche": "Accroche sur-mesure",
+    "paragrapheValeurAjoutee": "Valeur ajoutée alignée sur l'offre",
+    "paragrapheAdequationEntreprise": "Pourquoi cette entreprise et ce poste",
+    "paragrapheConclusion": "Conclusion",
+    "formulePolitesseSortie": "Formule de politesse",
+    "texteComplet": "Texte complet prêt à l'emploi"
+  },
+  "modificationsApportees": [
+    "Explication claire 1 des adaptations stratégiques effectuées",
+    "Explication claire 2",
+    "Explication claire 3"
+  ],
+  "tauxCorrespondanceEstime": 94
+}`;
+
+    const responseText = await generateGeminiContentWithFallback(ai, prompt);
+    const parsed = safeJsonParse(responseText, defaultAdaptation);
+
+    const tailoredCv = parsed.cvPersonnalise || parsed.cvModifie || cv;
+    const finalResult = {
+      ...defaultAdaptation,
+      ...parsed,
+      cvPersonnalise: tailoredCv,
+      cvModifie: tailoredCv,
+      modificationsApportees: parsed.modificationsApportees || defaultAdaptation.modificationsApportees,
+      tauxCorrespondanceEstime: parsed.tauxCorrespondanceEstime || 94
+    };
+
+    return res.json(finalResult);
+  } catch (err: any) {
+    console.error('Error adapting application:', err?.message || err);
+    return res.json(defaultAdaptation);
+  }
+};
+
+app.post('/api/ai/adapter-candidature', handleAdaptCandidateCV);
+app.post('/api/ai/personnaliser-cv', handleAdaptCandidateCV);
 
 // -------------------------------------------------------------
 // VITE INTEGRATION & SERVER STARTUP

@@ -14,7 +14,7 @@ export interface User {
 
 export interface Section {
   id: string;
-  type: 'profil' | 'experience' | 'formation' | 'competences' | 'langues' | 'projets' | 'certifications' | 'interets' | 'references' | 'personnalisee';
+  type: 'profil' | 'experience' | 'formation' | 'competences' | 'langues' | 'projets' | 'certifications' | 'interets' | 'references' | 'benevolat' | 'publications' | 'distinctions' | 'qualites' | 'personnalisee';
   titre: string;
   ordre: number;
   visible: boolean;
@@ -27,8 +27,11 @@ export interface Section {
     couleurFond?: string;
     couleurTexte?: string;
     couleurTitre?: string;
-    styleEntete?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line';
-    styleCompetences?: 'grid' | 'list' | 'badges' | 'progress';
+    alignementTitre?: 'left' | 'center' | 'right';
+    tailleTitre?: number;
+    casseTitre?: 'uppercase' | 'capitalize' | 'normal';
+    styleEntete?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header' | 'badge-line';
+    styleCompetences?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor' | 'tech-cards';
     alignementDates?: 'left' | 'top' | 'inline';
     rayonBordure?: number;
     epaisseurBordure?: number;
@@ -51,10 +54,10 @@ export interface CVTheme {
   sidebarTextColor?: string;
   headingColor?: string;
   sidebarHeadingColor?: string;
-  headerStyle?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top';
-  sectionHeaderStyle?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header';
+  headerStyle?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top' | 'tech-arches';
+  sectionHeaderStyle?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header' | 'badge-line';
   separatorStyle?: 'solid' | 'dashed' | 'dotted' | 'thick' | 'none';
-  skillsDisplayMode?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor';
+  skillsDisplayMode?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor' | 'tech-cards';
   experienceDatesAlignment?: 'left' | 'top' | 'inline';
   borderRadiusVal?: number;
   borderWidthVal?: number;
@@ -103,9 +106,9 @@ export interface CV {
   couleurTexteSidebar?: string;
   couleurTitreSection?: string;
   couleurTitreSectionSidebar?: string;
-  styleEnTete?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top';
-  styleEnTeteSection?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header';
-  styleCompetences?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor';
+  styleEnTete?: 'banner' | 'clean' | 'card' | 'arch' | 'modern-split' | 'minimal' | 'luxury-gold' | 'ocean-wave' | 'diagonal-split' | 'organic-arch' | 'sidebar-top' | 'tech-arches';
+  styleEnTeteSection?: 'underline' | 'pill' | 'banner' | 'left-border' | 'minimal' | 'boxed' | 'stars' | 'double-line' | 'arch-block' | 'badge-header' | 'badge-line';
+  styleCompetences?: 'grid' | 'list' | 'badges' | 'progress' | 'stars' | 'tags' | 'circular-progress' | 'badges-multicolor' | 'tech-cards';
   stylePucesListes?: 'disc' | 'square' | 'arrow' | 'check' | 'star' | 'dash' | 'numbered' | 'none';
   alignementDatesExperience?: 'left' | 'top' | 'inline';
   nombreColonnes?: 1 | 2;
@@ -171,8 +174,49 @@ export interface CV {
   photoCropY?: number;
   sections: Section[];
   statutPaiement: StatutPaiement;
+  // Preservation & Custom adaptation metadata
+  isModified?: boolean; // Flag if this CV was tailored/customized for a specific job offer
+  parentCvId?: string; // ID of the original source CV
+  jobTargetTitle?: string; // Name of targeted position
+  jobTargetCompany?: string; // Name of targeted company
+  jobMatchRate?: number; // Match rate percentage (e.g. 92)
+  adaptedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SavedLetter {
+  id: string;
+  utilisateurId: string;
+  cvId?: string; // Associated source CV ID
+  titre: string; // Title given to this letter (e.g. "Lettre Développeur - TotalEnergies")
+  destinataire: string; // e.g. "Direction des Ressources Humaines"
+  entreprise: string; // e.g. "Société Générale"
+  poste: string; // e.g. "Chef de Projet Digital"
+  villeDate?: string; // e.g. "Douala, le 15 Août 2026"
+  dateCreation: string;
+  updatedAt: string;
+  langue: Language;
+  police?: string;
+  taillePolice?: number;
+  couleurAccent?: string;
+  expediteur: {
+    nomComplet: string;
+    titreProfessionnel?: string;
+    email: string;
+    telephone: string;
+    adresse: string;
+    ville?: string;
+  };
+  objet: string;
+  formulePolitesseEntree: string;
+  paragrapheAccroche: string;
+  paragrapheValeurAjoutee: string;
+  paragrapheAdequationEntreprise: string;
+  paragrapheConclusion: string;
+  formulePolitesseSortie: string;
+  texteComplet: string;
+  signature?: string;
 }
 
 export interface CustomPreset {
@@ -274,6 +318,7 @@ export interface CompetenceItem {
   niveau?: number; // 0 to 10
   sousTitre?: string; // e.g. "Développeur Backend"
   categorie?: string;
+  description?: string;
   sousCompetences?: string; // Legacy string or raw text
   listSousCompetences?: SubCompetenceItem[]; // Structured array of sub-competences
   styleSousCompetences?: 'badges' | 'puces' | 'tirets' | 'gras' | 'italique' | 'texte_libre' | 'barres';
@@ -338,5 +383,113 @@ export interface ReferenceItem {
   entreprise: string;
   email?: string;
   telephone?: string;
+  relation?: string;
 }
+
+export interface BenevolatItem {
+  id: string;
+  role: string;
+  organisation: string;
+  ville?: string;
+  dateDebut?: string;
+  dateFin?: string;
+  actuel?: boolean;
+  description?: string;
+}
+
+export interface PublicationItem {
+  id: string;
+  titre: string;
+  editeurOuRevue?: string;
+  datePublication?: string;
+  auteurs?: string;
+  lien?: string;
+  description?: string;
+}
+
+export interface DistinctionItem {
+  id: string;
+  titre: string;
+  organisme?: string;
+  annee?: string;
+  description?: string;
+}
+
+export interface QualiteItem {
+  id: string;
+  nom: string;
+  description?: string;
+}
+
+// AI Career Tools Types
+export interface LettreMotivationResult {
+  destinataire?: string;
+  entreprise?: string;
+  poste?: string;
+  objet: string;
+  formulePolitesseEntree: string;
+  paragrapheAccroche: string;
+  paragrapheValeurAjoutee: string;
+  paragrapheAdequationEntreprise: string;
+  paragrapheConclusion: string;
+  formulePolitesseSortie: string;
+  texteComplet: string;
+}
+
+export interface LinkedInProfileResult {
+  titreProfessionnel: string; // Headline percutante
+  resumeAPropos: string; // Bio / About
+  motsClesStrategiques: string[];
+  experiencesOptimisees: Array<{
+    poste: string;
+    entreprise: string;
+    pointsCles: string[];
+  }>;
+  conseilsVisibilite: string[];
+}
+
+export interface JobOfferExtraction {
+  titrePoste: string;
+  entreprise?: string;
+  lieu?: string;
+  competencesClesRequises?: string[];
+  competencesRequises?: string[];
+  pointsFortsDetectes?: string[];
+  questionsPrecision?: Array<{
+    id: string;
+    question: string;
+    description: string;
+    contexte: string;
+  }>;
+  questionsPersonnalisees?: Array<{
+    id: string;
+    question: string;
+    description: string;
+    contexte: string;
+  }>;
+}
+
+export type OffreEmploiAnalyse = JobOfferExtraction;
+
+export interface PersonnalisationResult {
+  cvModifie?: CV;
+  cvPersonnalise?: CV;
+  lettreMotivation?: LettreMotivationResult;
+  modificationsApportees: string[];
+  tauxCorrespondanceEstime: number;
+}
+
+export type OffreAdaptationResult = PersonnalisationResult;
+
+export interface LinkedInOptimizationResult {
+  titreProfil: string; // Headline
+  resumeBio: string; // Bio / About section
+  motsClesRecommandes: string[];
+  experiencesLinkedIn: Array<{
+    titrePoste: string;
+    pointsCles: string[];
+  }>;
+  conseilsVisibilite: string[];
+}
+
 

@@ -573,7 +573,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         </div>
 
         <p className="text-[10px] text-slate-400 text-center italic">
-          💡 Cliquez directement sur n'importe quel texte ou bloc du CV pour régler ses paramètres spécifiques.
+          Cliquez directement sur n'importe quel texte ou bloc du CV pour régler ses paramètres spécifiques.
         </p>
       </div>
     );

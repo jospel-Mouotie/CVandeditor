@@ -2,10 +2,11 @@ import React from 'react';
 import { Menu, Plus, Shield } from 'lucide-react';
 import { Language, User } from '../types';
 import { getTranslation } from '../i18n/translations';
+import { AppView } from './Sidebar';
 
 interface NavbarProps {
-  currentView: 'home' | 'dashboard' | 'gallery' | 'editor' | 'admin';
-  setCurrentView: (view: 'home' | 'dashboard' | 'gallery' | 'editor' | 'admin') => void;
+  currentView: AppView;
+  setCurrentView: (view: AppView) => void;
   langue: Language;
   onSelectLanguage?: (lang: Language) => void;
   onToggleSidebar: () => void;
@@ -30,6 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'dashboard': return t('navDashboard');
       case 'gallery': return t('navTemplates');
       case 'editor': return activeCvTitle ? `${t('editorTitle')}: ${activeCvTitle}` : t('editorTitle');
+      case 'letters': return 'Mes Lettres de Motivation';
+      case 'letter-generator': return 'Générateur de Lettre de Motivation';
+      case 'job-targeting': return 'Cibler une Offre d\'Emploi & Personnalisation CV';
+      case 'linkedin': return 'Optimisation Profil LinkedIn Pro';
       case 'admin': return t('navAdmin');
       default: return 'MYCV BUILDER';
     }

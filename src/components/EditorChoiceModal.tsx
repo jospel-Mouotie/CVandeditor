@@ -14,7 +14,8 @@ import {
   Layout, 
   Check, 
   Palette,
-  Eye
+  Eye,
+  Monitor
 } from 'lucide-react';
 import { TemplatePreviewModal } from './TemplatePreviewModal';
 
@@ -87,6 +88,21 @@ export const EditorChoiceModal: React.FC<EditorChoiceModalProps> = ({
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               {labels.subtitle}
             </p>
+
+            {/* Desktop Experience Alert Banner */}
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/80 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <Monitor className="w-4 h-4 shrink-0 text-amber-700 dark:text-amber-400 mt-0.5" />
+              <div className="leading-snug">
+                <span className="font-bold">
+                  {langue === 'en' ? 'Optimal on Computer:' : langue === 'ar' ? 'الأفضل على الكمبيوتر:' : 'Idéal sur Ordinateur :'}
+                </span>{' '}
+                {langue === 'en' 
+                  ? 'The editor mode with real-time A4 rendering and fine layout adjustments is ideally designed for a computer or tablet rather than a phone.'
+                  : langue === 'ar'
+                  ? 'وضع المحرر مع العرض الفوري A4 والضبط الدقيق مصمم بشكل مثالي لشاشات الكمبيوتر بدلاً من الهواتف.'
+                  : 'Le mode éditeur avec aperçu A4 en temps réel et glisser-déposer est idéalement conçu pour un ordinateur ou une tablette plutôt qu\'un téléphone.'}
+              </div>
+            </div>
           </div>
 
           {/* If there is an active CV in progress */}

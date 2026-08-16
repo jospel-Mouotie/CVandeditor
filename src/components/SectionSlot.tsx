@@ -1,8 +1,52 @@
 import React from 'react';
-import { CV, Section, ProfilContenu, ExperienceItem, FormationItem, CompetenceItem, SubCompetenceItem, LangueItem, PersonnaliseeContenu } from '../types';
+import {
+  CV,
+  Section,
+  ProfilContenu,
+  ExperienceItem,
+  FormationItem,
+  CompetenceItem,
+  SubCompetenceItem,
+  LangueItem,
+  PersonnaliseeContenu,
+  ProjetItem,
+  CertificationItem,
+  InteretItem,
+  ReferenceItem,
+  BenevolatItem,
+  PublicationItem,
+  DistinctionItem,
+  QualiteItem
+} from '../types';
 import { getBackgroundStyle } from '../utils/backgroundHelpers';
 import { SkillLevelRenderer } from './SkillLevelRenderer';
-import { Mail, Phone, MapPin, Globe, User, Briefcase, GraduationCap, CheckCircle, Star, FolderTree, X, Palette, Type } from 'lucide-react';
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  User,
+  Briefcase,
+  GraduationCap,
+  CheckCircle,
+  Star,
+  FolderTree,
+  X,
+  Palette,
+  Type,
+  GripVertical,
+  Heart,
+  Award,
+  BookOpen,
+  Sparkles,
+  Link2,
+  ExternalLink,
+  Code,
+  Server,
+  ShieldCheck,
+  Cpu,
+  Terminal
+} from 'lucide-react';
 
 interface SectionSlotProps {
   section: Section;
@@ -71,13 +115,16 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
   const effectiveHeadingColor = secStyle?.couleurTitre || headingColor;
   const effectiveTextColor = secStyle?.couleurTexte || textColor;
   const effectiveBgColor = secStyle?.couleurFond;
+  const effectiveTitleAlign = secStyle?.alignementTitre || titleAlign || 'left';
+  const effectiveTitleSize = secStyle?.tailleTitre || titleFontSizePt;
+  const effectiveTitleCase = secStyle?.casseTitre || titleCase;
 
   // Formatting Title Text
   const formatTitleText = (rawTitle: string) => {
-    if (titleCase === 'capitalize') {
+    if (effectiveTitleCase === 'capitalize') {
       return rawTitle.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
     }
-    if (titleCase === 'normal') {
+    if (effectiveTitleCase === 'normal') {
       return rawTitle;
     }
     return rawTitle.toUpperCase();
@@ -86,11 +133,11 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
   const formattedTitle = formatTitleText(section.titre);
   const titleStyleObj: React.CSSProperties = {
     color: effectiveHeadingColor,
-    fontSize: titleFontSizePt ? `${titleFontSizePt}pt` : '1.1em',
-    textAlign: titleAlign
+    fontSize: effectiveTitleSize ? `${effectiveTitleSize}pt` : '1.1em',
+    textAlign: effectiveTitleAlign
   };
 
-  const titleAlignClass = titleAlign === 'center' ? 'text-center justify-center' : titleAlign === 'right' ? 'text-right justify-end' : 'text-left justify-start';
+  const titleAlignClass = effectiveTitleAlign === 'center' ? 'text-center justify-center' : effectiveTitleAlign === 'right' ? 'text-right justify-end' : 'text-left justify-start';
 
   const handleTitleBlur = (e: React.FocusEvent<HTMLElement>) => {
     if (!onUpdateSection) return;
@@ -147,9 +194,34 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
     }
   };
 
+  // Helper to get section icon
+  const getSectionIcon = (type: string) => {
+    switch (type) {
+      case 'profil':
+      case 'coordonnees':
+        return <User className="w-3 h-3" />;
+      case 'experience':
+        return <Briefcase className="w-3 h-3" />;
+      case 'formation':
+        return <GraduationCap className="w-3 h-3" />;
+      case 'competences':
+        return <CheckCircle className="w-3 h-3" />;
+      case 'langues':
+        return <Globe className="w-3 h-3" />;
+      case 'certifications':
+        return <Award className="w-3 h-3" />;
+      case 'interets':
+        return <Heart className="w-3 h-3" />;
+      case 'personnalisee':
+        return <Sparkles className="w-3 h-3" />;
+      default:
+        return <Sparkles className="w-3 h-3" />;
+    }
+  };
+
   // Helper for Section Titles
   const renderHeader = () => {
-    const headerFontSize = titleFontSizePt ? `${titleFontSizePt}pt` : '1.1em';
+    const headerFontSize = effectiveTitleSize ? `${effectiveTitleSize}pt` : '1.1em';
 
     const renderTitleEditable = (extraClass: string = '') => (
       <span
@@ -163,6 +235,56 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
     );
 
     switch (effectiveHeaderStyle) {
+      case 'badge-line':
+        if (effectiveTitleAlign === 'center') {
+          return (
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-0.5 flex-1 rounded-full opacity-80" style={{ backgroundColor: secondaryAccentColor || accentColor }} />
+              <div className="flex items-center gap-2 shrink-0">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
+                  style={{ backgroundColor: accentColor, color: '#FFFFFF' }}
+                >
+                  {getSectionIcon(section.type)}
+                </div>
+                <h3 className="font-black uppercase tracking-wider shrink-0 text-[12px] sm:text-[13px]" style={titleStyleObj}>
+                  {renderTitleEditable()}
+                </h3>
+              </div>
+              <div className="h-0.5 flex-1 rounded-full opacity-80" style={{ backgroundColor: secondaryAccentColor || accentColor }} />
+            </div>
+          );
+        }
+        if (effectiveTitleAlign === 'right') {
+          return (
+            <div className="mb-2 flex items-center justify-end gap-2">
+              <div className="h-0.5 flex-1 rounded-full opacity-80" style={{ backgroundColor: secondaryAccentColor || accentColor }} />
+              <h3 className="font-black uppercase tracking-wider shrink-0 text-[12px] sm:text-[13px]" style={titleStyleObj}>
+                {renderTitleEditable()}
+              </h3>
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
+                style={{ backgroundColor: accentColor, color: '#FFFFFF' }}
+              >
+                {getSectionIcon(section.type)}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <div className="mb-2 flex items-center gap-2">
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
+              style={{ backgroundColor: accentColor, color: '#FFFFFF' }}
+            >
+              {getSectionIcon(section.type)}
+            </div>
+            <h3 className="font-black uppercase tracking-wider shrink-0 text-[12px] sm:text-[13px]" style={titleStyleObj}>
+              {renderTitleEditable()}
+            </h3>
+            <div className="h-0.5 flex-1 rounded-full opacity-80" style={{ backgroundColor: secondaryAccentColor || accentColor }} />
+          </div>
+        );
       case 'pill':
         return (
           <div className={`mb-2.5 flex ${titleAlignClass}`}>
@@ -177,46 +299,59 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
       case 'banner':
         return (
           <div
-            className={`mb-2.5 px-3 py-1.5 rounded-md font-black tracking-wider shadow-2xs ${titleAlignClass}`}
+            className={`mb-2.5 px-3 py-1.5 rounded-md font-black tracking-wider shadow-2xs flex ${titleAlignClass}`}
             style={{ backgroundColor: accentColor, color: '#FFFFFF', fontSize: headerFontSize }}
           >
-            {renderTitleEditable()}
+            <span>{renderTitleEditable()}</span>
           </div>
         );
       case 'left-border':
         return (
           <div className={`mb-1 flex items-center gap-1.5 ${titleAlignClass}`}>
-            <div className="w-1 h-3.5 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+            {effectiveTitleAlign !== 'right' && (
+              <div className="w-1 h-3.5 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+            )}
             <h3 className="font-extrabold tracking-wide" style={titleStyleObj}>
               {renderTitleEditable()}
             </h3>
+            {effectiveTitleAlign === 'right' && (
+              <div className="w-1 h-3.5 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+            )}
           </div>
         );
       case 'boxed':
         return (
           <div
-            className="mb-1 p-1 rounded border font-black tracking-wider text-center"
+            className={`mb-1 p-1 rounded border font-black tracking-wider flex ${titleAlignClass}`}
             style={{ borderColor: accentColor, backgroundColor: secondaryAccentColor + '33', ...titleStyleObj }}
           >
-            {renderTitleEditable()}
+            <span>{renderTitleEditable()}</span>
           </div>
         );
       case 'stars':
         return (
-          <div className="mb-1 flex items-center justify-between border-b pb-0.5" style={{ borderColor: accentColor + '44' }}>
+          <div className={`mb-1 flex items-center ${effectiveTitleAlign === 'center' ? 'justify-center gap-2' : effectiveTitleAlign === 'right' ? 'justify-end gap-2' : 'justify-between'} border-b pb-0.5`} style={{ borderColor: accentColor + '44' }}>
+            {effectiveTitleAlign === 'right' && (
+              <div className="flex items-center space-x-0.5" style={{ color: accentColor }}>
+                <Star className="w-2.5 h-2.5 fill-current" />
+                <Star className="w-2.5 h-2.5 fill-current" />
+              </div>
+            )}
             <h3 className="font-black tracking-wider" style={titleStyleObj}>
               {renderTitleEditable()}
             </h3>
-            <div className="flex items-center space-x-0.5" style={{ color: accentColor }}>
-              <Star className="w-2.5 h-2.5 fill-current" />
-              <Star className="w-2.5 h-2.5 fill-current" />
-            </div>
+            {effectiveTitleAlign !== 'right' && (
+              <div className="flex items-center space-x-0.5" style={{ color: accentColor }}>
+                <Star className="w-2.5 h-2.5 fill-current" />
+                <Star className="w-2.5 h-2.5 fill-current" />
+              </div>
+            )}
           </div>
         );
       case 'double-line':
         return (
-          <div className="mb-1 border-b border-t py-0.5" style={{ borderColor: accentColor }}>
-            <h3 className="font-black tracking-widest text-center" style={titleStyleObj}>
+          <div className={`mb-1 border-b border-t py-0.5 flex ${titleAlignClass}`} style={{ borderColor: accentColor }}>
+            <h3 className="font-black tracking-widest" style={titleStyleObj}>
               {renderTitleEditable()}
             </h3>
           </div>
@@ -224,17 +359,17 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
       case 'arch-block':
         return (
           <div
-            className={`mb-1 px-2.5 py-1 rounded-t-xl rounded-b-xs font-black tracking-wider text-white ${titleAlignClass}`}
+            className={`mb-1 px-2.5 py-1 rounded-t-xl rounded-b-xs font-black tracking-wider text-white flex ${titleAlignClass}`}
             style={{ backgroundColor: accentColor, fontSize: headerFontSize }}
           >
-            {renderTitleEditable()}
+            <span>{renderTitleEditable()}</span>
           </div>
         );
       case 'badge-header':
         return (
           <div className={`mb-1 flex ${titleAlignClass}`}>
             <span
-              className="px-2.5 py-0.5 font-black rounded inline-block border-l-2"
+              className={`px-2.5 py-0.5 font-black rounded inline-block ${effectiveTitleAlign === 'right' ? 'border-r-2' : 'border-l-2'}`}
               style={{ backgroundColor: secondaryAccentColor + '44', borderColor: accentColor, color: effectiveHeadingColor, fontSize: headerFontSize }}
             >
               {renderTitleEditable()}
@@ -243,7 +378,7 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
         );
       case 'minimal':
         return (
-          <div className={`mb-1 ${titleAlignClass}`}>
+          <div className={`mb-1 flex ${titleAlignClass}`}>
             <h3 className="font-extrabold tracking-widest" style={titleStyleObj}>
               {renderTitleEditable()}
             </h3>
@@ -252,7 +387,7 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
       case 'underline':
       default:
         return (
-          <div className="mb-1 border-b pb-0.5" style={{ borderColor: accentColor }}>
+          <div className={`mb-1 border-b pb-0.5 flex ${titleAlignClass}`} style={{ borderColor: accentColor }}>
             <h3 className="font-extrabold tracking-wider" style={titleStyleObj}>
               {renderTitleEditable()}
             </h3>
@@ -276,18 +411,67 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
     }
   };
 
-  // Helper for multi-line description & bullet lists
+  // Helper for multi-line description & bullet lists with Bold/Italic markdown support
   const renderFormattedDescription = (desc: string | undefined, onUpdate?: (val: string) => void) => {
     if (!desc && !onUpdate) return null;
     const textVal = desc || '';
 
+    // If inline editing mode is active, show text for direct edits
+    if (onUpdate) {
+      // Helper function to render text with markdown bold & italic visually while keeping it clean
+      const renderParsedMarkdownText = (raw: string) => {
+        const lines = raw.split('\n');
+        return lines.map((line, lIdx) => {
+          // Parse **bold** and *italic*
+          const parts = [];
+          let remaining = line;
+          let pIdx = 0;
+
+          // Simple regex to parse **bold** and *italic*
+          const regex = /(\*\*([^*]+)\*\*|\*([^*]+)\*)/g;
+          let match;
+          let lastIndex = 0;
+
+          while ((match = regex.exec(line)) !== null) {
+            if (match.index > lastIndex) {
+              parts.push(<span key={`${lIdx}-${pIdx++}`}>{line.substring(lastIndex, match.index)}</span>);
+            }
+            if (match[2]) {
+              // Bold **text**
+              parts.push(<strong key={`${lIdx}-${pIdx++}`} className="font-extrabold">{match[2]}</strong>);
+            } else if (match[3]) {
+              // Italic *text*
+              parts.push(<em key={`${lIdx}-${pIdx++}`} className="italic font-serif">{match[3]}</em>);
+            }
+            lastIndex = regex.lastIndex;
+          }
+
+          if (lastIndex < line.length) {
+            parts.push(<span key={`${lIdx}-${pIdx++}`}>{line.substring(lastIndex)}</span>);
+          }
+
+          return (
+            <div key={lIdx} className="min-h-[1.2em]">
+              {parts.length > 0 ? parts : <span>{line}</span>}
+            </div>
+          );
+        });
+      };
+
+      return (
+        <div
+          contentEditable={Boolean(onUpdate)}
+          suppressContentEditableWarning
+          onBlur={(e) => onUpdate?.(e.currentTarget.innerText)}
+          className="opacity-90 mt-0.5 text-[0.95em] outline-none cursor-text whitespace-pre-line"
+        >
+          {renderParsedMarkdownText(textVal)}
+        </div>
+      );
+    }
+
     return (
-      <div
-        contentEditable={Boolean(onUpdate)}
-        suppressContentEditableWarning
-        onBlur={(e) => onUpdate?.(e.currentTarget.innerText)}
-        className="opacity-90 mt-0.5 text-[0.95em] outline-none cursor-text whitespace-pre-line"
-      >
+      <div className="opacity-90 mt-0.5 text-[0.95em] whitespace-pre-line">
         {textVal}
       </div>
     );
@@ -447,7 +631,7 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
           style={{ minHeight: '44px' }}
         >
           <span className="flex items-center gap-1.5">
-            <span className="text-[1.1em]">☰</span>
+            <GripVertical className="w-4 h-4" />
             <span>Déplacer: {section.titre}</span>
           </span>
           <span className="text-[0.8em] bg-white/20 px-2 py-0.5 rounded uppercase">Zone {section.colonne || 'principale'}</span>
@@ -799,6 +983,63 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
           };
 
           const renderSkillItemList = (itemsList: CompetenceItem[]) => {
+            if (effectiveSkillsMode === 'tech-cards') {
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-1.5 w-full">
+                  {itemsList.map((sk, idx) => {
+                    const itemIdx = rawItems.findIndex(i => i.id === sk.id || i === sk);
+                    return (
+                      <div
+                        key={sk.id || idx}
+                        className="flex flex-col rounded-t-xl rounded-b-lg p-2.5 border relative shadow-2xs transition-all"
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderColor: '#E2E8F0',
+                          borderTopColor: accentColor,
+                          borderTopWidth: '3px'
+                        }}
+                      >
+                        {/* Top Circular Badge */}
+                        <div
+                          className="w-6 h-6 rounded-full mx-auto -mt-5 mb-1.5 flex items-center justify-center shadow-xs text-white shrink-0"
+                          style={{ backgroundColor: accentColor }}
+                        >
+                          {idx === 0 ? <Code className="w-3.5 h-3.5" /> : idx === 1 ? <Server className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        </div>
+
+                        {/* Card Title */}
+                        <h4
+                          contentEditable={Boolean(onUpdateSection)}
+                          suppressContentEditableWarning
+                          onBlur={(e) => updateSkillItem(itemIdx >= 0 ? itemIdx : 0, 'nom', e.currentTarget.innerText)}
+                          className="font-black text-center text-[10.5px] uppercase tracking-wider mb-2 outline-none cursor-text leading-tight"
+                          style={{ color: accentColor }}
+                        >
+                          {sk.nom}
+                        </h4>
+
+                        {/* Bullets List */}
+                        {sk.listSousCompetences && sk.listSousCompetences.length > 0 ? (
+                          <ul className="space-y-1 text-[9.5px] leading-snug opacity-90">
+                            {sk.listSousCompetences.map((sub, sIdx) => (
+                              <li key={sub.id || sIdx} className="flex items-start gap-1">
+                                <span className="shrink-0 font-bold" style={{ color: secondaryAccentColor || accentColor }}>•</span>
+                                <span>{sub.nom}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : sk.description ? (
+                          <div className="text-[9.5px] leading-snug opacity-90 whitespace-pre-line">
+                            {sk.description}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            }
+
             if (effectiveSkillsMode === 'grid') {
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1211,8 +1452,9 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
                   </div>
                 )}
                 {p.lien && (
-                  <div className="text-[0.8em] font-mono opacity-80" style={{ color: accentColor }}>
-                    🔗 {p.lien}
+                  <div className="text-[0.8em] font-mono opacity-80 flex items-center gap-1" style={{ color: accentColor }}>
+                    <Link2 className="w-3 h-3 shrink-0" />
+                    <span>{p.lien}</span>
                   </div>
                 )}
                 {p.description && (
@@ -1242,6 +1484,105 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
           </div>
         )}
 
+        {/* BÉNÉVOLAT & ENGAGEMENT */}
+        {section.type === 'benevolat' && (
+          <div className="space-y-2.5">
+            {Array.isArray(section.contenu) && (section.contenu as BenevolatItem[]).map((b, idx) => (
+              <div key={b.id || idx} className="space-y-1 border-b border-slate-100/30 pb-1.5 last:border-0">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Heart className="w-3.5 h-3.5 shrink-0" style={{ color: accentColor }} />
+                    <span className="font-extrabold text-[0.95em]">{b.role}</span>
+                  </div>
+                  {(b.dateDebut || b.dateFin) && (
+                    <span className="text-[0.8em] opacity-75 font-mono">
+                      {b.dateDebut} {b.dateFin ? `– ${b.dateFin}` : b.actuel ? '– Présent' : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="font-semibold opacity-90 text-[0.9em]">
+                  <span>{b.organisation}</span>
+                  {b.ville && <span> | {b.ville}</span>}
+                </div>
+                {b.description && (
+                  <p className="text-[0.88em] opacity-90 whitespace-pre-line leading-relaxed">{b.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* PUBLICATIONS & RECHERCHES */}
+        {section.type === 'publications' && (
+          <div className="space-y-2.5">
+            {Array.isArray(section.contenu) && (section.contenu as PublicationItem[]).map((pub, idx) => (
+              <div key={pub.id || idx} className="space-y-1 border-b border-slate-100/30 pb-1.5 last:border-0">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 shrink-0" style={{ color: accentColor }} />
+                    <span className="font-extrabold text-[0.95em]">{pub.titre}</span>
+                  </div>
+                  {pub.datePublication && (
+                    <span className="text-[0.8em] opacity-75 font-mono">{pub.datePublication}</span>
+                  )}
+                </div>
+                {pub.editeurOuRevue && (
+                  <div className="italic opacity-85 text-[0.88em]">{pub.editeurOuRevue} {pub.auteurs ? `• ${pub.auteurs}` : ''}</div>
+                )}
+                {pub.lien && (
+                  <div className="text-[0.8em] font-mono opacity-80 flex items-center gap-1" style={{ color: accentColor }}>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                    <span>{pub.lien}</span>
+                  </div>
+                )}
+                {pub.description && (
+                  <p className="text-[0.88em] opacity-90 whitespace-pre-line leading-relaxed">{pub.description}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* DISTINCTIONS & PRIX */}
+        {section.type === 'distinctions' && (
+          <div className="space-y-2">
+            {Array.isArray(section.contenu) && (section.contenu as DistinctionItem[]).map((dist, idx) => (
+              <div key={dist.id || idx} className="flex items-start justify-between gap-2 border-b border-slate-100/30 pb-1.5 last:border-0">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 font-extrabold text-[0.9em]">
+                    <Award className="w-3.5 h-3.5 shrink-0" style={{ color: accentColor }} />
+                    <span>{dist.titre}</span>
+                  </div>
+                  {dist.organisme && <div className="text-[0.8em] opacity-80">{dist.organisme}</div>}
+                  {dist.description && <p className="text-[0.85em] opacity-90 leading-snug">{dist.description}</p>}
+                </div>
+                {dist.annee && (
+                  <span className="text-[0.8em] opacity-75 font-mono shrink-0 font-bold" style={{ color: accentColor }}>
+                    {dist.annee}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* QUALITÉS / SOFT SKILLS */}
+        {section.type === 'qualites' && (
+          <div className="flex flex-wrap gap-1.5">
+            {Array.isArray(section.contenu) && (section.contenu as QualiteItem[]).map((q, idx) => (
+              <div
+                key={q.id || idx}
+                className="px-2.5 py-1 rounded-lg text-[0.85em] font-bold border inline-flex items-center gap-1.5 shadow-2xs"
+                style={{ backgroundColor: secondaryAccentColor + '44', borderColor: accentColor + '44', color: textColor }}
+              >
+                <Sparkles className="w-3 h-3 shrink-0" style={{ color: accentColor }} />
+                <span>{q.nom}</span>
+                {q.description && <span className="text-[0.8em] opacity-75 font-normal">({q.description})</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* CENTRES D'INTÉRÊT / HOBBIES */}
         {section.type === 'interets' && (
           <div className="flex flex-wrap gap-1.5">
@@ -1252,7 +1593,7 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
                   className="px-2.5 py-1 rounded-full text-[0.85em] font-bold border inline-flex items-center gap-1"
                   style={{ backgroundColor: secondaryAccentColor + '44', borderColor: accentColor + '44', color: textColor }}
                 >
-                  {it.icone && <span>{it.icone}</span>}
+                  {it.icone && <span className="text-xs">{it.icone}</span>}
                   <span>{typeof it === 'string' ? it : it.nom}</span>
                 </span>
               ))
@@ -1266,11 +1607,22 @@ export const SectionSlot: React.FC<SectionSlotProps> = ({
         {section.type === 'references' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {Array.isArray(section.contenu) && (section.contenu as any[]).map((ref, idx) => (
-              <div key={ref.id || idx} className="p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-0.5" style={{ backgroundColor: secondaryAccentColor + '22' }}>
+              <div key={ref.id || idx} className="p-2 rounded-xl border border-slate-200/60 dark:border-slate-700/60 space-y-1" style={{ backgroundColor: secondaryAccentColor + '22' }}>
                 <div className="font-extrabold text-[0.9em]">{ref.nomComplet}</div>
                 <div className="text-[0.8em] opacity-80">{ref.poste} • {ref.entreprise}</div>
-                {ref.email && <div className="text-[0.75em] opacity-75 font-mono">✉️ {ref.email}</div>}
-                {ref.telephone && <div className="text-[0.75em] opacity-75 font-mono">📞 {ref.telephone}</div>}
+                {ref.email && (
+                  <div className="text-[0.75em] opacity-75 font-mono flex items-center gap-1">
+                    <Mail className="w-3 h-3 shrink-0" style={{ color: accentColor }} />
+                    <span>{ref.email}</span>
+                  </div>
+                )}
+                {ref.telephone && (
+                  <div className="text-[0.75em] opacity-75 font-mono flex items-center gap-1">
+                    <Phone className="w-3 h-3 shrink-0" style={{ color: accentColor }} />
+                    <span>{ref.telephone}</span>
+                  </div>
+                )}
+                {ref.relation && <div className="text-[0.75em] opacity-70 italic">{ref.relation}</div>}
               </div>
             ))}
           </div>

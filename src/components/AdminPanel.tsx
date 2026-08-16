@@ -63,12 +63,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ langue, onRefresh }) => 
     }
   };
 
-  const filteredPayments = payments.filter(p => {
+  const safePayments = Array.isArray(payments) ? payments : [];
+  const filteredPayments = safePayments.filter(p => {
     const matchesStatus = filterStatus === 'ALL' || p.statut === filterStatus;
     const query = searchQuery.toLowerCase();
     const matchesSearch = 
-      p.referenceTransaction.toLowerCase().includes(query) ||
-      p.numeroExpediteur.toLowerCase().includes(query) ||
+      (p.referenceTransaction || '').toLowerCase().includes(query) ||
+      (p.numeroExpediteur || '').toLowerCase().includes(query) ||
       (p.userEmail && p.userEmail.toLowerCase().includes(query)) ||
       (p.userName && p.userName.toLowerCase().includes(query));
     
@@ -115,7 +116,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ langue, onRefresh }) => 
             }`}
           >
             <Clock className="w-4 h-4 text-amber-500" />
-            <span>En attente ({payments.filter(p => p.statut === 'EN_ATTENTE').length})</span>
+            <span>En attente ({safePayments.filter(p => p.statut === 'EN_ATTENTE').length})</span>
           </button>
           
           <button
@@ -126,7 +127,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ langue, onRefresh }) => 
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <span>Tous l'historique ({payments.length})</span>
+            <span>Tous l'historique ({safePayments.length})</span>
           </button>
         </div>
 

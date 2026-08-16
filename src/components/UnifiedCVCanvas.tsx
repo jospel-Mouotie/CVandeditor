@@ -424,7 +424,7 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
 
   const showPhoto = cv.afficherPhoto !== false && Boolean(cv.photoUrl);
   const rawShape = cv.formePhoto || cv.photoForme || templateTheme.photoFrameStyle || 'ronde';
-  const photoSize = cv.photoTaille ?? (isStrict1Page ? 64 : 96);
+  const photoSize = cv.photoTaillePx ?? cv.photoTaille ?? (isStrict1Page ? 64 : 96);
   const photoPos = cv.photoPosition || templateTheme.photoPosition || (headerStyle === 'sidebar-top' ? 'in-sidebar' : 'in-header');
   const showHeaderPhoto = showPhoto && photoPos === 'in-header';
   const showSidebarPhoto = showPhoto && photoPos === 'in-sidebar';
@@ -512,6 +512,55 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
     const profileBgColor = cv.couleurFondProfil || profilSection?.styleSection?.couleurFond || primaryAccent;
     const profileTextColor = profilSection?.styleSection?.couleurTexte || '#FFFFFF';
 
+    if (headerStyle === 'tech-arches' || template?.layoutType === 'yann-landy-tech') {
+      const words = (displayedMainTitle || '').trim().split(' ');
+      const halfIndex = Math.ceil(words.length / 2);
+      const firstPart = words.slice(0, halfIndex).join(' ');
+      const secondPart = words.slice(halfIndex).join(' ');
+
+      return (
+        <div
+          className="w-full relative overflow-hidden pt-4 pb-2 px-6 bg-white shrink-0 flex flex-col items-center justify-center text-center select-none"
+          style={{ minHeight: customHeaderHeight || '90px' }}
+        >
+          {/* Top-Left Concentric Geometric Arcs SVG */}
+          <div className="absolute top-0 left-0 w-28 h-28 pointer-events-none overflow-hidden z-0">
+            <svg className="w-full h-full" viewBox="0 0 120 120" fill="none" preserveAspectRatio="none">
+              <path d="M0,0 L0,120 A120,120 0 0,0 120,0 Z" fill={primaryAccent} opacity="0.95" />
+              <path d="M0,0 L0,85 A85,85 0 0,0 85,0 Z" fill={secondaryAccent} opacity="0.85" />
+              <path d="M0,0 L0,55 A55,55 0 0,0 55,0 Z" fill="#BAE6FD" opacity="0.9" />
+              <path d="M0,0 L0,25 A25,25 0 0,0 25,0 Z" fill={primaryAccent} />
+            </svg>
+          </div>
+
+          {/* Centered Name and Subtitle */}
+          <div className="relative z-10 max-w-xl mx-auto space-y-1">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-tight flex items-center justify-center gap-2 flex-wrap leading-none">
+              <span style={{ color: primaryAccent }}>{firstPart}</span>
+              {secondPart && <span style={{ color: secondaryAccent }}>{secondPart}</span>}
+            </h1>
+            <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider opacity-90" style={{ color: primaryAccent }}>
+              {displayedSubTitle}
+            </p>
+          </div>
+
+          {showHeaderPhoto && (
+            <div className="absolute top-3 right-6 z-10">
+              <div
+                onMouseDown={handlePhotoMouseDown}
+                onTouchStart={handlePhotoMouseDown}
+                className={`overflow-hidden shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                style={{ ...customPhotoStyle, borderColor: primaryAccent, borderWidth: '2px' }}
+                title="Glissez à la souris pour déplacer la photo n'importe où !"
+              >
+                <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     if (headerStyle === 'diagonal-split') {
       return (
         <div
@@ -530,8 +579,8 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
             <div
               onMouseDown={handlePhotoMouseDown}
               onTouchStart={handlePhotoMouseDown}
-              className={`relative z-10 overflow-hidden border-2 border-white shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-              style={{ width: `${photoSize}px`, height: (rawShape === 'galet' || rawShape === 'squircle') ? `${photoSize * 1.25}px` : `${photoSize}px`, ...photoInlineStyle }}
+              className={`relative z-10 overflow-hidden shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+              style={{ ...customPhotoStyle, borderColor: cv.photoBordureCouleur || '#FFFFFF' }}
               title="Glissez à la souris pour déplacer la photo n'importe où !"
             >
               <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
@@ -562,14 +611,8 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
               <div
                 onMouseDown={handlePhotoMouseDown}
                 onTouchStart={handlePhotoMouseDown}
-                className={`overflow-hidden border-2 bg-white/20 shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-                style={{
-                  width: `${photoSize}px`,
-                  height: (rawShape === 'galet' || rawShape === 'squircle') ? `${photoSize * 1.25}px` : `${photoSize}px`,
-                  borderColor: cv.photoBordureCouleur || '#FFFFFF',
-                  borderWidth: cv.photoBordureEpaisseur ? `${cv.photoBordureEpaisseur}px` : undefined,
-                  ...photoInlineStyle
-                }}
+                className={`overflow-hidden bg-white/20 shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                style={customPhotoStyle}
                 title="Glissez à la souris pour déplacer la photo n'importe où !"
               >
                 <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
@@ -599,8 +642,8 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
               <div
                 onMouseDown={handlePhotoMouseDown}
                 onTouchStart={handlePhotoMouseDown}
-                className={`overflow-hidden border-2 border-white shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-                style={{ width: `${photoSize}px`, height: (rawShape === 'galet' || rawShape === 'squircle') ? `${photoSize * 1.25}px` : `${photoSize}px`, ...photoInlineStyle }}
+                className={`overflow-hidden shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                style={{ ...customPhotoStyle, borderColor: cv.photoBordureCouleur || '#FFFFFF' }}
                 title="Glissez à la souris pour déplacer la photo n'importe où !"
               >
                 <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
@@ -640,8 +683,8 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
           <div
             onMouseDown={handlePhotoMouseDown}
             onTouchStart={handlePhotoMouseDown}
-            className={`overflow-hidden border-2 border-slate-200 shadow-xs cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-            style={{ width: `${photoSize}px`, height: (rawShape === 'galet' || rawShape === 'squircle') ? `${photoSize * 1.25}px` : `${photoSize}px`, ...photoInlineStyle }}
+            className={`overflow-hidden shadow-xs cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+            style={customPhotoStyle}
             title="Glissez à la souris pour déplacer la photo n'importe où !"
           >
             <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
@@ -650,6 +693,78 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
       </div>
     );
   };
+
+  // Tech Contact Footer (e.g. for Yann Landy template & variants)
+  const renderTechContactFooter = () => {
+    const pContenu = profilSection?.contenu as ProfilContenu | undefined;
+    const email = pContenu?.email || 'mousseniy@gmail.com';
+    const telephone = pContenu?.telephone || '+237 6 98 95 83 57';
+    const adresse = pContenu?.adresse || 'Douala, Yassa – Cameroun';
+    const dispo = 'Immédiate';
+
+    return (
+      <div
+        className="w-full mt-auto py-2.5 px-4 text-white text-center shrink-0 grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xs shadow-md select-none text-[10px]"
+        style={{ backgroundColor: primaryAccent }}
+      >
+        <div className="flex flex-col items-center">
+          <span className="font-extrabold uppercase tracking-wider text-[9px] opacity-80" style={{ color: secondaryAccent || '#38BDF8' }}>Localisation</span>
+          <span className="font-semibold text-white/95 truncate max-w-full">{adresse}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="font-extrabold uppercase tracking-wider text-[9px] opacity-80" style={{ color: secondaryAccent || '#38BDF8' }}>Téléphone</span>
+          <span className="font-semibold text-white/95 truncate max-w-full">{telephone}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="font-extrabold uppercase tracking-wider text-[9px] opacity-80" style={{ color: secondaryAccent || '#38BDF8' }}>Email</span>
+          <span className="font-semibold text-white/95 truncate max-w-full">{email}</span>
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="font-extrabold uppercase tracking-wider text-[9px] opacity-80" style={{ color: secondaryAccent || '#38BDF8' }}>Disponibilité</span>
+          <span className="font-semibold text-white/95">{dispo}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Page 2 Header
+  const renderPage2Header = () => {
+    return (
+      <div
+        className="w-full relative overflow-hidden py-2 px-4 mb-2 flex items-center justify-between border-b shrink-0"
+        style={{ borderColor: primaryAccent + '44' }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-6 rounded-full" style={{ backgroundColor: primaryAccent }} />
+          <h2 className="text-xs font-black uppercase tracking-wider" style={{ color: primaryAccent }}>
+            {displayedMainTitle} <span className="opacity-40 font-normal mx-1">|</span> <span className="font-bold opacity-80" style={{ color: secondaryAccent }}>{displayedSubTitle}</span>
+          </h2>
+        </div>
+        <div className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded text-white shadow-2xs" style={{ backgroundColor: primaryAccent }}>
+          Page 2
+        </div>
+      </div>
+    );
+  };
+
+  // Page 2 Footer
+  const renderPage2Footer = () => {
+    return (
+      <div className="w-full mt-auto pt-2 flex items-center justify-between text-[9px] font-bold text-slate-400 border-t border-slate-200 shrink-0">
+        <span className="uppercase tracking-widest">{displayedMainTitle}</span>
+        <div className="h-1 w-20 rounded-full" style={{ backgroundColor: primaryAccent }} />
+        <span>Page 2 / 2</span>
+      </div>
+    );
+  };
+
+  // Split sections for 2-page discrete sheet rendering
+  const visibleSections = cv.sections.filter(s => s.visible);
+  const page1Types = ['profil', 'competences', 'personnalisee'];
+  const page1Filtered = visibleSections.filter(s => page1Types.includes(s.type));
+  const page2Filtered = visibleSections.filter(s => !page1Types.includes(s.type));
+  const page1Sections = page1Filtered.length > 0 ? page1Filtered : visibleSections.slice(0, Math.ceil(visibleSections.length / 2));
+  const page2Sections = page2Filtered.length > 0 ? page2Filtered : visibleSections.slice(Math.ceil(visibleSections.length / 2));
 
   // Status Badge Indicators
   const SINGLE_PAGE_PX = 1122;
@@ -698,202 +813,60 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
         <div
           id={id}
           ref={cvInnerRef}
-          className="bg-white text-slate-900 w-full shadow-2xl rounded-none sm:rounded-lg border border-slate-300 relative select-none flex flex-col overflow-hidden transition-all duration-200"
+          className="w-full relative select-none flex flex-col gap-6 items-center"
           style={{
             fontFamily: fontCss,
-            ...mainBgStyle,
-            color: mainTextColor,
-            padding: `${pagePaddingPx}px`,
-            boxSizing: 'border-box',
-            minHeight: is2Pages ? '2244px' : '1122px',
-            height: isStrict1Page ? '1122px' : 'auto',
-            maxHeight: isStrict1Page ? '1122px' : undefined,
             transform: scaleFactor < 1 ? `scale(${scaleFactor})` : undefined,
             transformOrigin: 'top center',
           }}
         >
-          {watermarkContent}
-          {interactiveToolbar}
+          {is2Pages ? (
+            /* 2-PAGE DISCRETE SHEETS (Guarantees zero page cuts and exact 2 pages output) */
+            <>
+              {/* SHEET 1 */}
+              <div
+                data-page-index="1"
+                className="cv-page-sheet bg-white text-slate-900 w-full shadow-2xl rounded-none sm:rounded-lg border border-slate-300 relative select-none flex flex-col justify-between overflow-hidden transition-all duration-200"
+                style={{
+                  fontFamily: fontCss,
+                  ...mainBgStyle,
+                  color: mainTextColor,
+                  padding: `${pagePaddingPx}px`,
+                  boxSizing: 'border-box',
+                  minHeight: '1122px',
+                  height: '1122px',
+                  maxHeight: '1122px'
+                }}
+              >
+                {watermarkContent}
+                {interactiveToolbar}
+                {renderTopHeader()}
 
-          {renderTopHeader()}
+                {showPhoto && photoPos === 'free' && (
+                  <div
+                    onMouseDown={handlePhotoMouseDown}
+                    onTouchStart={handlePhotoMouseDown}
+                    className={`absolute z-45 overflow-hidden border-2 shadow-2xl cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                    style={{
+                      left: `${cv.photoX ?? 10}%`,
+                      top: `${cv.photoY ?? 5}%`,
+                      width: `${photoSize}px`,
+                      height: rawShape === 'galet' ? `${photoSize * 1.3}px` : `${photoSize}px`,
+                      borderColor: cv.photoBordureCouleur || primaryAccent,
+                      borderWidth: cv.photoBordureEpaisseur !== undefined ? `${cv.photoBordureEpaisseur}px` : '2px',
+                      borderRadius: cv.photoRayon !== undefined ? `${cv.photoRayon}px` : undefined,
+                      ...photoInlineStyle
+                    }}
+                  >
+                    <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
+                  </div>
+                )}
 
-          {/* FLOATING FREE PHOTO ELEMENT (DRAGGABLE ANYWHERE ON CANVAS WITH MOUSE OR TOUCH) */}
-          {showPhoto && photoPos === 'free' && (
-            <div
-              onMouseDown={handlePhotoMouseDown}
-              onTouchStart={handlePhotoMouseDown}
-              className={`absolute z-45 overflow-hidden border-2 shadow-2xl cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-              style={{
-                left: `${cv.photoX ?? 10}%`,
-                top: `${cv.photoY ?? 5}%`,
-                width: `${photoSize}px`,
-                height: rawShape === 'galet' ? `${photoSize * 1.3}px` : `${photoSize}px`,
-                borderColor: cv.photoBordureCouleur || primaryAccent,
-                borderWidth: cv.photoBordureEpaisseur !== undefined ? `${cv.photoBordureEpaisseur}px` : '2px',
-                borderRadius: cv.photoRayon !== undefined ? `${cv.photoRayon}px` : undefined,
-                ...(cv.cadrePhotoRing === 'double-ring' ? {
-                  outline: `3px solid ${primaryAccent}`,
-                  outlineOffset: '3px',
-                  boxShadow: `0 0 0 5px ${secondaryAccent || '#FFFFFF'}`
-                } : cv.cadrePhotoRing === 'gold-ring' ? {
-                  outline: '3px solid #D97706',
-                  outlineOffset: '3px'
-                } : {})
-              }}
-              title={lang === 'en' ? "Drag photo freely anywhere!" : lang === 'ar' ? "اسحب الصورة بحرية إلى أي مكان!" : "Déplacez la photo librement à la souris n'importe où !"}
-            >
-              <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
-            </div>
-          )}
-
-          {/* PAGE BREAK VISUAL INDICATORS AT 1122PX AND 2244PX ONLY IF MULTI-PAGE */}
-          {calculatedPages > 1 && (
-            <div
-              className="absolute left-0 right-0 border-b-2 border-dashed border-red-400 z-30 pointer-events-none opacity-50 print:hidden flex items-center justify-end px-3 text-[9px] font-black uppercase text-red-600 bg-red-50/20"
-              style={{ top: '1122px' }}
-            >
-              {getTranslation(lang, 'endOfPage1')}
-            </div>
-          )}
-          {calculatedPages > 2 && (
-            <div
-              className="absolute left-0 right-0 border-b-2 border-dashed border-red-400 z-30 pointer-events-none opacity-50 print:hidden flex items-center justify-end px-3 text-[9px] font-black uppercase text-red-600 bg-red-50/20"
-              style={{ top: '2244px' }}
-            >
-              {getTranslation(lang, 'endOfPage2')}
-            </div>
-          )}
-
-          {/* CANVAS BODY: 1 OR 2 COLUMNS WITH DROPPABLE ZONES */}
-          <div className="flex-1 flex flex-col w-full min-h-0 h-full">
-            {!isTwoColumn ? (
-              /* SINGLE COLUMN LAYOUT */
-              <div className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2">
-                <DroppableZone
-                  id="zone-droppable-principale"
-                  zoneName="principale"
-                  sectionsList={mainZoneSections}
-                  isSidebar={false}
-                  isReorderActive={isReorderActive}
-                  sectionGapPx={sectionGapPx}
-                  accentColor={primaryAccent}
-                  secondaryAccentColor={secondaryAccent}
-                  textColor={mainTextColor}
-                  headingColor={mainHeadingColor}
-                  headerStyle={sectionHeaderStyle}
-                  skillsDisplayMode={skillsDisplayMode}
-                  experienceDatesAlignment={datesAlignment}
-                  bulletStyle={bulletStyle}
-                  titleFontSizePt={titleFontSizePt}
-                  titleCase={titleCase}
-                  titleAlign={titleAlign}
-                  timelineStyle={cv.timelineStyle || 'none'}
-                  afficherBadgesIcones={cv.afficherBadgesIcones}
-                  fontCss={fontCss}
-                  dynamicTextStyle={dynamicTextStyle}
-                  selectedSectionId={selectedSectionId}
-                  onSelectSection={setSelectedSectionId}
-                  onUpdateSection={handleUpdateSection}
-                  onUpdateSectionStyle={handleUpdateSectionStyle}
-                />
-              </div>
-            ) : (
-              /* TWO COLUMN LAYOUT */
-              <div className={`flex-1 flex flex-row w-full min-h-0 h-full ${sidebarPosition === 'droite' ? 'flex-row-reverse' : ''}`}>
-                {/* COLUMN 1: SIDEBAR / LATÉRAL */}
-                <div
-                  className={`px-2 py-1.5 sm:px-2.5 sm:py-2 shrink-0 transition-all border-r border-slate-200/80 relative ${
-                    cv.formeSidebarDecor === 'arch-top'
-                      ? 'rounded-t-[60px] sm:rounded-t-[90px] shadow-lg mt-1'
-                      : cv.formeSidebarDecor === 'wave-cut'
-                      ? 'rounded-r-3xl sm:rounded-br-[80px] shadow-md'
-                      : cv.formeSidebarDecor === 'diagonal-cut'
-                      ? '[clip-path:polygon(0_0,100%_15px,100%_100%,0_100%)]'
-                      : cv.formeSidebarDecor === 'card-float'
-                      ? 'rounded-2xl shadow-xl my-2 ml-1 border border-slate-200/60'
-                      : ''
-                  }`}
-                  style={{
-                    width: `${leftColWidth}%`,
-                    ...sidebarBgStyle,
-                    color: sidebarTextColor,
-                    borderColor: secondaryAccent
-                  }}
-                >
-                  {showSidebarPhoto && (
-                    <div className="mb-2 flex justify-center">
-                      <div
-                        onMouseDown={handlePhotoMouseDown}
-                        onTouchStart={handlePhotoMouseDown}
-                        className={`overflow-hidden border-2 shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
-                        style={{
-                          width: `${photoSize}px`,
-                          height: (rawShape === 'galet' || rawShape === 'squircle') ? `${photoSize * 1.25}px` : `${photoSize}px`,
-                          borderColor: cv.photoBordureCouleur || primaryAccent,
-                          ...photoInlineStyle,
-                          ...(cv.cadrePhotoRing === 'double-ring' ? {
-                            outline: `3px solid ${primaryAccent}`,
-                            outlineOffset: '3px',
-                            boxShadow: `0 0 0 5px ${secondaryAccent || '#FFFFFF'}`
-                          } : cv.cadrePhotoRing === 'gold-ring' ? {
-                            outline: '3px solid #D97706',
-                            outlineOffset: '3px'
-                          } : {})
-                        }}
-                        title="Glissez à la souris pour déplacer la photo n'importe où !"
-                      >
-                        <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
-                      </div>
-                    </div>
-                  )}
-                  {headerStyle === 'sidebar-top' && (
-                    <div className="mb-2 text-center space-y-0.5 pb-1 border-b border-current opacity-90">
-                      <h1 className="text-xs font-black uppercase tracking-tight">{displayedMainTitle}</h1>
-                      <p className="text-[9px] font-bold uppercase opacity-80">{displayedSubTitle}</p>
-                    </div>
-                  )}
+                <div className="flex-1 flex flex-col w-full py-1 min-h-0">
                   <DroppableZone
-                    id="zone-droppable-gauche"
-                    zoneName="gauche"
-                    sectionsList={leftZoneSections}
-                    isSidebar={true}
-                    isReorderActive={isReorderActive}
-                    sectionGapPx={sectionGapPx}
-                    accentColor={primaryAccent}
-                    secondaryAccentColor={secondaryAccent}
-                    textColor={sidebarTextColor}
-                    headingColor={sidebarHeadingColor}
-                    headerStyle={sectionHeaderStyle}
-                    skillsDisplayMode={skillsDisplayMode}
-                    experienceDatesAlignment={datesAlignment}
-                    bulletStyle={bulletStyle}
-                    titleFontSizePt={titleFontSizePt}
-                    titleCase={titleCase}
-                    titleAlign={titleAlign}
-                    timelineStyle={cv.timelineStyle || 'none'}
-                    afficherBadgesIcones={cv.afficherBadgesIcones}
-                    fontCss={fontCss}
-                    dynamicTextStyle={dynamicTextStyle}
-                    selectedSectionId={selectedSectionId}
-                    onSelectSection={setSelectedSectionId}
-                    onUpdateSection={handleUpdateSection}
-                    onUpdateSectionStyle={handleUpdateSectionStyle}
-                  />
-                </div>
-
-                {/* COLUMN 2: MAIN / PRINCIPALE */}
-                <div
-                  className="px-2.5 py-1.5 sm:px-3 sm:py-2 flex-1 transition-all"
-                  style={{
-                    width: `${rightColWidth}%`,
-                    ...mainBgStyle,
-                    color: mainTextColor
-                  }}
-                >
-                  <DroppableZone
-                    id="zone-droppable-droite"
-                    zoneName="droite"
-                    sectionsList={rightZoneSections}
+                    id="zone-droppable-page1"
+                    zoneName="principale"
+                    sectionsList={page1Sections}
                     isSidebar={false}
                     isReorderActive={isReorderActive}
                     sectionGapPx={sectionGapPx}
@@ -918,9 +891,268 @@ export const UnifiedCVCanvas: React.FC<UnifiedCVCanvasProps> = ({
                     onUpdateSectionStyle={handleUpdateSectionStyle}
                   />
                 </div>
+
+                {renderTechContactFooter()}
               </div>
-            )}
-          </div>
+
+              {/* SHEET 2 */}
+              <div
+                data-page-index="2"
+                className="cv-page-sheet bg-white text-slate-900 w-full shadow-2xl rounded-none sm:rounded-lg border border-slate-300 relative select-none flex flex-col justify-between overflow-hidden transition-all duration-200"
+                style={{
+                  fontFamily: fontCss,
+                  ...mainBgStyle,
+                  color: mainTextColor,
+                  padding: `${pagePaddingPx}px`,
+                  boxSizing: 'border-box',
+                  minHeight: '1122px',
+                  height: '1122px',
+                  maxHeight: '1122px'
+                }}
+              >
+                {watermarkContent}
+                {renderPage2Header()}
+
+                <div className="flex-1 flex flex-col w-full py-1 min-h-0">
+                  <DroppableZone
+                    id="zone-droppable-page2"
+                    zoneName="principale"
+                    sectionsList={page2Sections}
+                    isSidebar={false}
+                    isReorderActive={isReorderActive}
+                    sectionGapPx={sectionGapPx}
+                    accentColor={primaryAccent}
+                    secondaryAccentColor={secondaryAccent}
+                    textColor={mainTextColor}
+                    headingColor={mainHeadingColor}
+                    headerStyle={sectionHeaderStyle}
+                    skillsDisplayMode={skillsDisplayMode}
+                    experienceDatesAlignment={datesAlignment}
+                    bulletStyle={bulletStyle}
+                    titleFontSizePt={titleFontSizePt}
+                    titleCase={titleCase}
+                    titleAlign={titleAlign}
+                    timelineStyle={cv.timelineStyle || 'none'}
+                    afficherBadgesIcones={cv.afficherBadgesIcones}
+                    fontCss={fontCss}
+                    dynamicTextStyle={dynamicTextStyle}
+                    selectedSectionId={selectedSectionId}
+                    onSelectSection={setSelectedSectionId}
+                    onUpdateSection={handleUpdateSection}
+                    onUpdateSectionStyle={handleUpdateSectionStyle}
+                  />
+                </div>
+
+                {renderPage2Footer()}
+              </div>
+            </>
+          ) : (
+            /* SINGLE CONTINUOUS PAGE SHEET */
+            <div
+              data-page-index="1"
+              className="cv-page-sheet bg-white text-slate-900 w-full shadow-2xl rounded-none sm:rounded-lg border border-slate-300 relative select-none flex flex-col overflow-hidden transition-all duration-200"
+              style={{
+                fontFamily: fontCss,
+                ...mainBgStyle,
+                color: mainTextColor,
+                padding: `${pagePaddingPx}px`,
+                boxSizing: 'border-box',
+                minHeight: '1122px',
+                height: isStrict1Page ? '1122px' : 'auto',
+                maxHeight: isStrict1Page ? '1122px' : undefined,
+              }}
+            >
+              {watermarkContent}
+              {interactiveToolbar}
+
+              {renderTopHeader()}
+
+              {/* FLOATING FREE PHOTO ELEMENT (DRAGGABLE ANYWHERE ON CANVAS WITH MOUSE OR TOUCH) */}
+              {showPhoto && photoPos === 'free' && (
+                <div
+                  onMouseDown={handlePhotoMouseDown}
+                  onTouchStart={handlePhotoMouseDown}
+                  className={`absolute z-45 overflow-hidden border-2 shadow-2xl cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                  style={{
+                    left: `${cv.photoX ?? 10}%`,
+                    top: `${cv.photoY ?? 5}%`,
+                    width: `${photoSize}px`,
+                    height: rawShape === 'galet' ? `${photoSize * 1.3}px` : `${photoSize}px`,
+                    borderColor: cv.photoBordureCouleur || primaryAccent,
+                    borderWidth: cv.photoBordureEpaisseur !== undefined ? `${cv.photoBordureEpaisseur}px` : '2px',
+                    borderRadius: cv.photoRayon !== undefined ? `${cv.photoRayon}px` : undefined,
+                    ...(cv.cadrePhotoRing === 'double-ring' ? {
+                      outline: `3px solid ${primaryAccent}`,
+                      outlineOffset: '3px',
+                      boxShadow: `0 0 0 5px ${secondaryAccent || '#FFFFFF'}`
+                    } : cv.cadrePhotoRing === 'gold-ring' ? {
+                      outline: '3px solid #D97706',
+                      outlineOffset: '3px'
+                    } : {})
+                  }}
+                  title={lang === 'en' ? "Drag photo freely anywhere!" : lang === 'ar' ? "اسحب الصورة بحرية إلى أي مكان!" : "Déplacez la photo librement à la souris n'importe où !"}
+                >
+                  <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
+                </div>
+              )}
+
+              {/* PAGE BREAK VISUAL INDICATORS AT 1122PX ONLY IF MULTI-PAGE WITHOUT STRICT 2-PAGE SHEETS */}
+              {calculatedPages > 1 && !is2Pages && (
+                <div
+                  className="absolute left-0 right-0 border-b-2 border-dashed border-red-400 z-30 pointer-events-none opacity-50 print:hidden flex items-center justify-end px-3 text-[9px] font-black uppercase text-red-600 bg-red-50/20"
+                  style={{ top: '1122px' }}
+                >
+                  {getTranslation(lang, 'endOfPage1')}
+                </div>
+              )}
+
+              {/* CANVAS BODY: 1 OR 2 COLUMNS WITH DROPPABLE ZONES */}
+              <div className="flex-1 flex flex-col w-full min-h-0 h-full">
+                {!isTwoColumn ? (
+                  /* SINGLE COLUMN LAYOUT */
+                  <div className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 flex flex-col justify-between">
+                    <DroppableZone
+                      id="zone-droppable-principale"
+                      zoneName="principale"
+                      sectionsList={mainZoneSections}
+                      isSidebar={false}
+                      isReorderActive={isReorderActive}
+                      sectionGapPx={sectionGapPx}
+                      accentColor={primaryAccent}
+                      secondaryAccentColor={secondaryAccent}
+                      textColor={mainTextColor}
+                      headingColor={mainHeadingColor}
+                      headerStyle={sectionHeaderStyle}
+                      skillsDisplayMode={skillsDisplayMode}
+                      experienceDatesAlignment={datesAlignment}
+                      bulletStyle={bulletStyle}
+                      titleFontSizePt={titleFontSizePt}
+                      titleCase={titleCase}
+                      titleAlign={titleAlign}
+                      timelineStyle={cv.timelineStyle || 'none'}
+                      afficherBadgesIcones={cv.afficherBadgesIcones}
+                      fontCss={fontCss}
+                      dynamicTextStyle={dynamicTextStyle}
+                      selectedSectionId={selectedSectionId}
+                      onSelectSection={setSelectedSectionId}
+                      onUpdateSection={handleUpdateSection}
+                      onUpdateSectionStyle={handleUpdateSectionStyle}
+                    />
+                    {(template?.layoutType === 'yann-landy-tech' || headerStyle === 'tech-arches') && renderTechContactFooter()}
+                  </div>
+                ) : (
+                  /* TWO COLUMN LAYOUT */
+                  <div className={`flex-1 flex flex-row w-full min-h-0 h-full ${sidebarPosition === 'droite' ? 'flex-row-reverse' : ''}`}>
+                    {/* COLUMN 1: SIDEBAR / LATÉRAL */}
+                    <div
+                      className={`px-2 py-1.5 sm:px-2.5 sm:py-2 shrink-0 transition-all border-r border-slate-200/80 relative ${
+                        cv.formeSidebarDecor === 'arch-top'
+                          ? 'rounded-t-[60px] sm:rounded-t-[90px] shadow-lg mt-1'
+                          : cv.formeSidebarDecor === 'wave-cut'
+                          ? 'rounded-r-3xl sm:rounded-br-[80px] shadow-md'
+                          : cv.formeSidebarDecor === 'diagonal-cut'
+                          ? '[clip-path:polygon(0_0,100%_15px,100%_100%,0_100%)]'
+                          : cv.formeSidebarDecor === 'card-float'
+                          ? 'rounded-2xl shadow-xl my-2 ml-1 border border-slate-200/60'
+                          : ''
+                      }`}
+                      style={{
+                        width: `${leftColWidth}%`,
+                        ...sidebarBgStyle,
+                        color: sidebarTextColor,
+                        borderColor: secondaryAccent
+                      }}
+                    >
+                      {showSidebarPhoto && (
+                        <div className="mb-2 flex justify-center">
+                          <div
+                            onMouseDown={handlePhotoMouseDown}
+                            onTouchStart={handlePhotoMouseDown}
+                            className={`overflow-hidden shadow-md cursor-grab active:cursor-grabbing hover:scale-105 transition-transform ${photoShapeClass}`}
+                            style={customPhotoStyle}
+                            title="Glissez à la souris pour déplacer la photo n'importe où !"
+                          >
+                            <img src={cv.photoUrl} alt="Portrait" className={`w-full h-full object-cover pointer-events-none ${photoShapeClass}`} />
+                          </div>
+                        </div>
+                      )}
+                      {headerStyle === 'sidebar-top' && (
+                        <div className="mb-2 text-center space-y-0.5 pb-1 border-b border-current opacity-90">
+                          <h1 className="text-xs font-black uppercase tracking-tight">{displayedMainTitle}</h1>
+                          <p className="text-[9px] font-bold uppercase opacity-80">{displayedSubTitle}</p>
+                        </div>
+                      )}
+                      <DroppableZone
+                        id="zone-droppable-gauche"
+                        zoneName="gauche"
+                        sectionsList={leftZoneSections}
+                        isSidebar={true}
+                        isReorderActive={isReorderActive}
+                        sectionGapPx={sectionGapPx}
+                        accentColor={primaryAccent}
+                        secondaryAccentColor={secondaryAccent}
+                        textColor={sidebarTextColor}
+                        headingColor={sidebarHeadingColor}
+                        headerStyle={sectionHeaderStyle}
+                        skillsDisplayMode={skillsDisplayMode}
+                        experienceDatesAlignment={datesAlignment}
+                        bulletStyle={bulletStyle}
+                        titleFontSizePt={titleFontSizePt}
+                        titleCase={titleCase}
+                        titleAlign={titleAlign}
+                        timelineStyle={cv.timelineStyle || 'none'}
+                        afficherBadgesIcones={cv.afficherBadgesIcones}
+                        fontCss={fontCss}
+                        dynamicTextStyle={dynamicTextStyle}
+                        selectedSectionId={selectedSectionId}
+                        onSelectSection={setSelectedSectionId}
+                        onUpdateSection={handleUpdateSection}
+                        onUpdateSectionStyle={handleUpdateSectionStyle}
+                      />
+                    </div>
+
+                    {/* COLUMN 2: MAIN / PRINCIPALE */}
+                    <div
+                      className="px-2.5 py-1.5 sm:px-3 sm:py-2 flex-1 transition-all"
+                      style={{
+                        width: `${rightColWidth}%`,
+                        ...mainBgStyle,
+                        color: mainTextColor
+                      }}
+                    >
+                      <DroppableZone
+                        id="zone-droppable-droite"
+                        zoneName="droite"
+                        sectionsList={rightZoneSections}
+                        isSidebar={false}
+                        isReorderActive={isReorderActive}
+                        sectionGapPx={sectionGapPx}
+                        accentColor={primaryAccent}
+                        secondaryAccentColor={secondaryAccent}
+                        textColor={mainTextColor}
+                        headingColor={mainHeadingColor}
+                        headerStyle={sectionHeaderStyle}
+                        skillsDisplayMode={skillsDisplayMode}
+                        experienceDatesAlignment={datesAlignment}
+                        bulletStyle={bulletStyle}
+                        titleFontSizePt={titleFontSizePt}
+                        titleCase={titleCase}
+                        titleAlign={titleAlign}
+                        timelineStyle={cv.timelineStyle || 'none'}
+                        afficherBadgesIcones={cv.afficherBadgesIcones}
+                        fontCss={fontCss}
+                        dynamicTextStyle={dynamicTextStyle}
+                        selectedSectionId={selectedSectionId}
+                        onSelectSection={setSelectedSectionId}
+                        onUpdateSection={handleUpdateSection}
+                        onUpdateSectionStyle={handleUpdateSectionStyle}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DndContext>

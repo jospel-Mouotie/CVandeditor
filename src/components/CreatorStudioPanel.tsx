@@ -19,7 +19,10 @@ import {
   User,
   Trash2,
   Columns,
-  Square
+  Square,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
 } from 'lucide-react';
 
 interface CreatorStudioPanelProps {
@@ -789,6 +792,49 @@ export const CreatorStudioPanel: React.FC<CreatorStudioPanelProps> = ({
             />
           </div>
 
+          {/* Alignement des titres de section */}
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Alignement des titres de section</span>
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => updateCvProp('alignementTitreSection', 'left')}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  (cv.alignementTitreSection || 'left') === 'left'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                <AlignLeft className="w-3.5 h-3.5" />
+                <span>Gauche</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateCvProp('alignementTitreSection', 'center')}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  cv.alignementTitreSection === 'center'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                <AlignCenter className="w-3.5 h-3.5" />
+                <span>Centre</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateCvProp('alignementTitreSection', 'right')}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  cv.alignementTitreSection === 'right'
+                    ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                <AlignRight className="w-3.5 h-3.5" />
+                <span>Droite</span>
+              </button>
+            </div>
+          </div>
+
           {/* Casse des titres */}
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">{t('titlesCase')}</span>
@@ -797,9 +843,9 @@ export const CreatorStudioPanel: React.FC<CreatorStudioPanelProps> = ({
               onChange={(e) => updateCvProp('casseTitreSection', e.target.value)}
               className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
             >
-              <option value="uppercase">UPPERCASE (EXAMPLE)</option>
-              <option value="capitalize">Capitalize (Example)</option>
-              <option value="normal">Normal (example)</option>
+              <option value="uppercase">MAJUSCULES (EXEMPLE)</option>
+              <option value="capitalize">Première Lettre (Exemple)</option>
+              <option value="normal">Minuscules normales (exemple)</option>
             </select>
           </div>
 
@@ -807,16 +853,64 @@ export const CreatorStudioPanel: React.FC<CreatorStudioPanelProps> = ({
           <div className="space-y-1">
             <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">{t('sectionHeadersStyle')}</span>
             <select
-              value={cv.styleEnTeteSection || 'underline'}
+              value={cv.styleEnTeteSection || 'badge-line'}
               onChange={(e) => updateCvProp('styleEnTeteSection', e.target.value)}
               className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
             >
-              <option value="underline">Underline</option>
-              <option value="pill">Pill Badge</option>
-              <option value="banner">Banner Full</option>
-              <option value="left-border">Left Border</option>
-              <option value="boxed">Boxed</option>
-              <option value="minimal">Minimal</option>
+              <option value="badge-line">Badge icône + Liseré dynamique (Style Tech)</option>
+              <option value="underline">Souligné classique moderne</option>
+              <option value="pill">Badge Pillule coloré</option>
+              <option value="banner">Bannière pleine largeur</option>
+              <option value="left-border">Ligne latérale d'accent</option>
+              <option value="boxed">Encadré plein moderne</option>
+              <option value="stars">Étoiles d'accentuation</option>
+              <option value="double-line">Double ligne supérieure/inférieure</option>
+              <option value="arch-block">Bloc Arche courbé</option>
+              <option value="badge-header">Badge latéral bicolore</option>
+              <option value="minimal">Minimaliste épuré</option>
+            </select>
+          </div>
+
+          {/* Style d'En-tête de Profil / Page */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Style de l'En-tête Profil</span>
+            <select
+              value={cv.styleEnTete || template?.headerStyle || 'tech-arches'}
+              onChange={(e) => updateCvProp('styleEnTete', e.target.value)}
+              className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+            >
+              <option value="tech-arches">Arches géométriques Tech (Yann Landy)</option>
+              <option value="banner">Bannière pleine largeur</option>
+              <option value="clean">Moderne épuré</option>
+              <option value="card">Carte flottante</option>
+              <option value="arch">Arche supérieure</option>
+              <option value="modern-split">Séparation moderne 2 tons</option>
+              <option value="minimal">Minimaliste</option>
+              <option value="luxury-gold">Or & Luxe</option>
+              <option value="ocean-wave">Vague océan</option>
+              <option value="diagonal-split">Découpe diagonale</option>
+              <option value="organic-arch">Arche organique</option>
+              <option value="sidebar-top">En-tête de colonne latérale</option>
+            </select>
+          </div>
+
+          {/* Style d'affichage des compétences */}
+          <div className="space-y-1">
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">Style des Compétences</span>
+            <select
+              value={cv.styleCompetences || 'tech-cards'}
+              onChange={(e) => updateCvProp('styleCompetences', e.target.value)}
+              className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold"
+            >
+              <option value="tech-cards">Cartes modulaires Tech avec puces (Yann Landy)</option>
+              <option value="grid">Grille de badges interactifs</option>
+              <option value="badges">Badges arrondis avec puces</option>
+              <option value="badges-multicolor">Badges multicolores</option>
+              <option value="progress">Barres de progression</option>
+              <option value="stars">Notation par étoiles</option>
+              <option value="tags">Étiquettes compactes</option>
+              <option value="circular-progress">Jauges circulaires</option>
+              <option value="list">Liste détaillée</option>
             </select>
           </div>
 
@@ -967,6 +1061,93 @@ export const CreatorStudioPanel: React.FC<CreatorStudioPanelProps> = ({
                   <span className="text-xs font-mono">{selectedSection.styleSection?.couleurTitre || t('defaultChoice')}</span>
                 </div>
               </div>
+
+              {/* Alignement Titre Spécifique */}
+              <div className="space-y-1 sm:col-span-2">
+                <span className="text-[11px] font-bold text-slate-500">Alignement du titre de cette section</span>
+                <div className="grid grid-cols-3 gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => updateSectionStyle('alignementTitre', 'left')}
+                    className={`py-1 px-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${
+                      (selectedSection.styleSection?.alignementTitre || cv.alignementTitreSection || 'left') === 'left'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <AlignLeft className="w-3 h-3" />
+                    <span>Gauche</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSectionStyle('alignementTitre', 'center')}
+                    className={`py-1 px-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${
+                      (selectedSection.styleSection?.alignementTitre || cv.alignementTitreSection) === 'center'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <AlignCenter className="w-3 h-3" />
+                    <span>Centre</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateSectionStyle('alignementTitre', 'right')}
+                    className={`py-1 px-2 rounded text-xs font-bold flex items-center justify-center gap-1 ${
+                      (selectedSection.styleSection?.alignementTitre || cv.alignementTitreSection) === 'right'
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    <AlignRight className="w-3 h-3" />
+                    <span>Droite</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Style d'En-tête Spécifique */}
+              <div className="space-y-1 sm:col-span-2">
+                <span className="text-[11px] font-bold text-slate-500">Style d'en-tête pour cette section</span>
+                <select
+                  value={selectedSection.styleSection?.styleEntete || cv.styleEnTeteSection || 'badge-line'}
+                  onChange={(e) => updateSectionStyle('styleEntete', e.target.value as any)}
+                  className="w-full p-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
+                >
+                  <option value="badge-line">Badge icône + Liseré dynamique (Style Tech)</option>
+                  <option value="underline">Souligné classique moderne</option>
+                  <option value="pill">Badge Pillule coloré</option>
+                  <option value="banner">Bannière pleine largeur</option>
+                  <option value="left-border">Ligne latérale d'accent</option>
+                  <option value="boxed">Encadré plein moderne</option>
+                  <option value="stars">Étoiles d'accentuation</option>
+                  <option value="double-line">Double ligne supérieure/inférieure</option>
+                  <option value="arch-block">Bloc Arche courbé</option>
+                  <option value="badge-header">Badge latéral bicolore</option>
+                  <option value="minimal">Minimaliste épuré</option>
+                </select>
+              </div>
+
+              {/* Style Compétences si la section est compétences */}
+              {selectedSection.type === 'competences' && (
+                <div className="space-y-1 sm:col-span-2">
+                  <span className="text-[11px] font-bold text-slate-500">Mode d'affichage des compétences</span>
+                  <select
+                    value={selectedSection.styleSection?.styleCompetences || cv.styleCompetences || 'tech-cards'}
+                    onChange={(e) => updateSectionStyle('styleCompetences', e.target.value as any)}
+                    className="w-full p-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-bold"
+                  >
+                    <option value="tech-cards">Cartes modulaires Tech avec puces (Yann Landy)</option>
+                    <option value="grid">Grille de badges interactifs</option>
+                    <option value="badges">Badges arrondis avec puces</option>
+                    <option value="badges-multicolor">Badges multicolores</option>
+                    <option value="progress">Barres de progression</option>
+                    <option value="stars">Notation par étoiles</option>
+                    <option value="tags">Étiquettes compactes</option>
+                    <option value="circular-progress">Jauges circulaires</option>
+                    <option value="list">Liste détaillée</option>
+                  </select>
+                </div>
+              )}
             </div>
           </div>
         )}

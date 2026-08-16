@@ -257,14 +257,6 @@ export async function exportCVToPDF(
   }
 
   try {
-    const canvas = await captureElementToCanvas(element);
-
-    if (!canvas || !canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0 || isNaN(canvas.width) || isNaN(canvas.height)) {
-      return { success: false, message: "Impossible de mesurer les dimensions du CV pour l'exportation PDF." };
-    }
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
     // Standard A4 portrait dimensions in mm (210 x 297)
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -278,31 +270,35 @@ export async function exportCVToPDF(
     const safePdfWidth = (typeof pdfWidth === 'number' && isFinite(pdfWidth) && pdfWidth > 0) ? pdfWidth : 210;
     const safePdfHeight = (typeof pdfHeight === 'number' && isFinite(pdfHeight) && pdfHeight > 0) ? pdfHeight : 297;
 
-    const imgWidth = safePdfWidth;
-    let rawImgHeight = (canvas.height * safePdfWidth) / canvas.width;
-
-    if (!rawImgHeight || isNaN(rawImgHeight) || !isFinite(rawImgHeight) || rawImgHeight <= 0) {
-      rawImgHeight = safePdfHeight;
-    }
-
-    if (!isTwoPagesMode) {
-      // STRICT 1-PAGE MODE: Guarantee single page A4 output exactly 210x297mm without spilling onto page 2
-      pdf.addImage(imgData, 'JPEG', 0, 0, safePdfWidth, safePdfHeight, undefined, 'FAST');
+    const pageSheets = element.querySelectorAll<HTMLElement>('.cv-page-sheet');
+    if (pageSheets.length > 0 && isTwoPagesMode) {
+      // MULTI-PAGE SHEET RENDER: Capture each distinct page container with zero cutting and exact 1:1 geometry
+      for (let i = 0; i < Math.min(pageSheets.length, 2); i++) {
+        if (i > 0) pdf.addPage();
+        const sheetCanvas = await captureElementToCanvas(pageSheets[i]);
+        if (sheetCanvas && sheetCanvas.width > 0 && sheetCanvas.height > 0) {
+          const sheetImg = sheetCanvas.toDataURL('image/jpeg', 0.98);
+          pdf.addImage(sheetImg, 'JPEG', 0, 0, safePdfWidth, safePdfHeight, undefined, 'FAST');
+        }
+      }
     } else {
-      // 2-PAGE MODE: Split cleanly across 2 pages
-      const page1Height = safePdfHeight;
-      pdf.addImage(imgData, 'JPEG', 0, 0, safePdfWidth, rawImgHeight, undefined, 'FAST');
-      
-      let heightLeft = rawImgHeight - page1Height;
-      let position = -page1Height;
-      let maxPages = 4;
+      // CONTINUOUS CANVAS RENDER: Capture container
+      const canvas = await captureElementToCanvas(element);
 
-      while (heightLeft > 20 && maxPages > 0) {
-        maxPages--;
+      if (!canvas || !canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0 || isNaN(canvas.width) || isNaN(canvas.height)) {
+        return { success: false, message: "Impossible de mesurer les dimensions du CV pour l'exportation PDF." };
+      }
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+      if (!isTwoPagesMode) {
+        // STRICT 1-PAGE MODE: Guarantee single page A4 output exactly 210x297mm
+        pdf.addImage(imgData, 'JPEG', 0, 0, safePdfWidth, safePdfHeight, undefined, 'FAST');
+      } else {
+        // STRICT 2-PAGE MODE: Render Page 1 and Page 2 precisely without a 3rd blank page
+        pdf.addImage(imgData, 'JPEG', 0, 0, safePdfWidth, safePdfHeight, undefined, 'FAST');
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, safePdfWidth, rawImgHeight, undefined, 'FAST');
-        position -= safePdfHeight;
-        heightLeft -= safePdfHeight;
+        pdf.addImage(imgData, 'JPEG', 0, -safePdfHeight, safePdfWidth, safePdfHeight * 2, undefined, 'FAST');
       }
     }
 
@@ -325,27 +321,31 @@ export async function exportCVToPDF(
 
       // Append text content as transparent/selectable layer at top coordinates without triggering page break
       if (textNodes.length > 0) {
-        pdf.setTextColor(255, 255, 255); // White or hidden
+        pdf.setPage(1);
+        pdf.setTextColor(255, 255, 255); // White / hidden text
         pdf.setFontSize(0.5); // Micro size text overlay for ATS indexers
         const fullText = textNodes.join(' ').replace(/[\r\n\t]+/g, ' ');
-        // Set at page top with small footprint to avoid auto page break
-        pdf.text(fullText.slice(0, 2000), 5, 5, { maxWidth: safePdfWidth - 10 });
+        pdf.text(fullText.slice(0, 1500), 5, 5, { maxWidth: safePdfWidth - 10 });
       }
     } catch {
       // Non-critical text overlay failure fallback
     }
 
-    // Strict page count enforcement: if 1-page mode was requested, eliminate any accidental extra pages
-    if (!isTwoPagesMode) {
-      while (pdf.getNumberOfPages() > 1) {
-        pdf.deletePage(pdf.getNumberOfPages());
-      }
+    // STRICT PAGE COUNT ENFORCEMENT: Guarantees exactly 1 page for 1-page mode and max 2 pages for 2-page mode
+    const maxAllowedPages = isTwoPagesMode ? 2 : 1;
+    while (pdf.getNumberOfPages() > maxAllowedPages) {
+      pdf.deletePage(pdf.getNumberOfPages());
     }
 
     const cleanFilename = filename.replace(/[^a-zA-Z0-9_-]/g, '_') || 'CV_Professionnel';
     pdf.save(`${cleanFilename}.pdf`);
 
-    return { success: true, message: 'CV PDF HD exporté avec succès (1 page garantie) !' };
+    return {
+      success: true,
+      message: isTwoPagesMode
+        ? 'CV PDF HD exporté avec succès (2 pages garanties sans page superflue) !'
+        : 'CV PDF HD exporté avec succès (1 page garantie) !'
+    };
   } catch (error: any) {
     console.error('Error generating PDF:', error);
     return {
