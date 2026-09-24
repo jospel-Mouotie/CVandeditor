@@ -11,7 +11,7 @@ import { AIAssistantModal } from './AIAssistantModal';
 import { ATSAnalyzerModal } from './ATSAnalyzerModal';
 import { HeaderProfileModal } from './HeaderProfileModal';
 import { PresetElementsModal } from './PresetElementsModal';
-import { exportCVToPDF } from '../utils/pdfExport';
+import { exportCVToPDF, printCV } from '../utils/pdfExport';
 import { PlusCircle, Sliders, Sparkles, FileSpreadsheet, X, User } from 'lucide-react';
 
 interface VisualCVEditorProps {
@@ -465,6 +465,7 @@ export const VisualCVEditor: React.FC<VisualCVEditorProps> = ({
         onOpenPresetElementsModal={() => setShowPresetModal(true)}
         onSaveCV={() => onSaveCV(convertDocumentToLegacyCV(document))}
         onExportPDF={() => exportCVToPDF('cv-preview-container', `${cv.titreCV || cv.titre || 'CV'}.pdf`, cv.pageCibleMode === '2_pages')}
+        onPrint={() => printCV('cv-preview-container')}
         onToggleViewMode={onToggleViewMode}
         viewMode={viewMode}
         onApplyThemeColor={handleApplyThemeColor}
@@ -524,12 +525,12 @@ export const VisualCVEditor: React.FC<VisualCVEditorProps> = ({
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (< lg screens) */}
-      <div className="lg:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-around z-40 shrink-0 shadow-lg">
+      {/* Mobile Bottom Navigation Bar (< lg screens) - Strictly Monochrome */}
+      <div className="lg:hidden bg-white dark:bg-black border-t border-black/15 dark:border-white/20 px-4 py-2 flex items-center justify-around z-40 shrink-0 shadow-lg text-black dark:text-white">
         <button
           onClick={() => setMobileDrawer(mobileDrawer === 'elements' ? null : 'elements')}
           className={`flex flex-col items-center space-y-1 text-[11px] font-bold p-1 rounded-xl transition-colors cursor-pointer ${
-            mobileDrawer === 'elements' ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'
+            mobileDrawer === 'elements' ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'
           }`}
         >
           <PlusCircle className="w-5 h-5" />
@@ -539,7 +540,7 @@ export const VisualCVEditor: React.FC<VisualCVEditorProps> = ({
         <button
           onClick={() => setMobileDrawer(mobileDrawer === 'properties' ? null : 'properties')}
           className={`flex flex-col items-center space-y-1 text-[11px] font-bold p-1 rounded-xl transition-colors cursor-pointer ${
-            mobileDrawer === 'properties' ? 'text-blue-600' : 'text-slate-600 dark:text-slate-400'
+            mobileDrawer === 'properties' ? 'bg-black text-white dark:bg-white dark:text-black' : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'
           }`}
         >
           <Sliders className="w-5 h-5" />
@@ -548,7 +549,7 @@ export const VisualCVEditor: React.FC<VisualCVEditorProps> = ({
 
         <button
           onClick={() => setShowAIModal(true)}
-          className="flex flex-col items-center space-y-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 p-1 rounded-xl cursor-pointer"
+          className="flex flex-col items-center space-y-1 text-[11px] font-bold text-black/80 dark:text-white/80 hover:text-black dark:hover:text-white p-1 rounded-xl cursor-pointer"
         >
           <Sparkles className="w-5 h-5" />
           <span>{langue === 'en' ? 'Gemini AI' : langue === 'ar' ? 'ذكاء Gemini' : 'IA Gemini'}</span>
@@ -556,7 +557,7 @@ export const VisualCVEditor: React.FC<VisualCVEditorProps> = ({
 
         <button
           onClick={() => setShowATSModal(true)}
-          className="flex flex-col items-center space-y-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 p-1 rounded-xl cursor-pointer"
+          className="flex flex-col items-center space-y-1 text-[11px] font-bold text-black/80 dark:text-white/80 hover:text-black dark:hover:text-white p-1 rounded-xl cursor-pointer"
         >
           <FileSpreadsheet className="w-5 h-5" />
           <span>{langue === 'en' ? 'ATS Score' : langue === 'ar' ? 'تقييم ATS' : 'Score ATS'}</span>

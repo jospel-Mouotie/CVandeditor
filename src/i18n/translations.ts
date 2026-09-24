@@ -244,8 +244,8 @@ export const translations = {
     docTitleLabel: 'Titre de votre document CV',
     backToResumes: 'Retour aux CVs',
     realCVPreview: 'Aperçu Vrai CV',
-    studioTitle: 'Formulaire & Studio de Création',
-    studioSubtitle: 'Personnalisez la structure, les arrière-plans, l\'opacité et les colonnes sans perdre vos données.',
+    studioTitle: 'Édition',
+    studioSubtitle: '',
     resetBtn: 'Réinitialiser',
     saveStyleBtn: 'Sauvegarder style',
     photoAndCoords: 'Photo & Coordonnées du Candidat',
@@ -330,9 +330,9 @@ export const translations = {
     continueToAdvancedConfig: 'Passer à la Configuration Avancée',
 
     // Template Chooser & Gallery
-    chooseYourModelTitle: "Choisissez votre modèle de CV d'exception",
-    chooseYourModelDesc: "Chaque modèle est optimisé pour le passage ATS (système de recrutement), entièrement personnalisable avec aperçu en temps réel.",
-    catalogHD: "Catalogue de Modèles HD",
+    chooseYourModelTitle: "Modèles",
+    chooseYourModelDesc: "",
+    catalogHD: "Modèles",
     createBlankPage: "Créer sur Page Blanche",
     searchTemplatePlaceholder: "Rechercher un modèle...",
     selectedTemplateLabel: "Modèle Sélectionné",
@@ -1455,27 +1455,42 @@ export function getLocalizedCategory(category: string, lang: Language): string {
 }
 
 // Localized Section Title Helper
-export function getLocalizedSectionTitle(sectionType: string, defaultTitle: string, lang: Language): string {
-  if (lang === 'fr') return defaultTitle;
+export function getLocalizedSectionTitle(sectionType: string, defaultTitle: string, lang?: Language | string): string {
+  const safeLang = (lang || 'fr').toLowerCase();
 
-  if (sectionType === 'profil') {
-    return lang === 'en' ? 'PROFILE & CONTACT' : 'الملف الشخصي ومعلومات الاتصال';
+  // If language is not Arabic, sanitize any accidental Arabic characters in defaultTitle
+  if (safeLang !== 'ar' && defaultTitle && /[\u0600-\u06FF]/.test(defaultTitle)) {
+    if (sectionType === 'profil') return 'Profil Professionnel';
+    if (sectionType === 'experience') return 'Expériences Professionnelles';
+    if (sectionType === 'formation') return 'Formation & Diplômes';
+    if (sectionType === 'competences') return 'Compétences Clés';
+    if (sectionType === 'langues') return 'Langues';
+    if (sectionType === 'interets') return "Centres d'intérêt";
+    return 'Section';
   }
-  if (sectionType === 'experience') {
-    return lang === 'en' ? 'WORK EXPERIENCE' : 'الخبرات المهنية';
-  }
-  if (sectionType === 'formation') {
-    return lang === 'en' ? 'EDUCATION' : 'المؤهلات الدراسية والشهادات';
-  }
-  if (sectionType === 'competences') {
-    return lang === 'en' ? 'SKILLS' : 'المهارات والخبرات';
-  }
-  if (sectionType === 'langues') {
-    return lang === 'en' ? 'LANGUAGES' : 'اللغات';
-  }
-  if (sectionType === 'personnalisee') {
+
+  if (safeLang === 'fr') return defaultTitle || 'Section';
+
+  if (safeLang === 'en') {
+    if (sectionType === 'profil') return 'PROFILE & CONTACT';
+    if (sectionType === 'experience') return 'WORK EXPERIENCE';
+    if (sectionType === 'formation') return 'EDUCATION';
+    if (sectionType === 'competences') return 'SKILLS';
+    if (sectionType === 'langues') return 'LANGUAGES';
+    if (sectionType === 'interets') return 'INTERESTS';
     return defaultTitle;
   }
-  return defaultTitle;
+
+  if (safeLang === 'ar') {
+    if (sectionType === 'profil') return 'الملف الشخصي ومعلومات الاتصال';
+    if (sectionType === 'experience') return 'الخبرات المهنية';
+    if (sectionType === 'formation') return 'المؤهلات الدراسية والشهادات';
+    if (sectionType === 'competences') return 'المهارات والخبرات';
+    if (sectionType === 'langues') return 'اللغات';
+    if (sectionType === 'interets') return 'الاهتمامات';
+    return defaultTitle;
+  }
+
+  return defaultTitle || 'Section';
 }
 

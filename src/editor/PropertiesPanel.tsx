@@ -314,20 +314,20 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-bold">
               <span>Interligne du CV</span>
-              <span className="text-indigo-600 font-mono font-bold">{(cv?.hauteurLigneValeur ?? 1.25).toFixed(2)}x</span>
+              <span className="text-indigo-600 font-mono font-bold">{(cv?.hauteurLigneValeur ?? 1.5).toFixed(2)}x</span>
             </div>
             <input
               type="range"
               min={0.6}
               max={2.2}
               step={0.05}
-              value={cv?.hauteurLigneValeur ?? 1.25}
+              value={cv?.hauteurLigneValeur ?? 1.5}
               onChange={(e) => onUpdateCV?.({ hauteurLigneValeur: parseFloat(e.target.value) })}
               className="w-full accent-indigo-600 cursor-pointer"
             />
             <div className="flex justify-between text-[9px] text-slate-400">
               <span>0.6x (Compact)</span>
-              <span>1.25x (Standard)</span>
+              <span>1.5x (Standard)</span>
               <span>2.0x (Aéré)</span>
             </div>
           </div>
@@ -336,14 +336,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-bold">
               <span>Taille Police du Corps</span>
-              <span className="text-indigo-600 font-mono font-bold">{cv?.taillePoliceValeur ?? 10} pt</span>
+              <span className="text-indigo-600 font-mono font-bold">{cv?.taillePoliceValeur ?? 9} pt</span>
             </div>
             <input
               type="range"
               min={5}
               max={16}
               step={0.5}
-              value={cv?.taillePoliceValeur ?? 10}
+              value={cv?.taillePoliceValeur ?? 9}
               onChange={(e) => onUpdateCV?.({ taillePoliceValeur: parseFloat(e.target.value) })}
               className="w-full accent-indigo-600 cursor-pointer"
             />
@@ -353,14 +353,14 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           <div className="space-y-1">
             <div className="flex justify-between text-[11px] font-bold">
               <span>Taille des Titres de Section</span>
-              <span className="text-indigo-600 font-mono font-bold">{cv?.tailleTitreSectionValeur ?? 12} pt</span>
+              <span className="text-indigo-600 font-mono font-bold">{cv?.tailleTitreSectionValeur ?? 11} pt</span>
             </div>
             <input
               type="range"
               min={8}
               max={24}
               step={0.5}
-              value={cv?.tailleTitreSectionValeur ?? 12}
+              value={cv?.tailleTitreSectionValeur ?? 11}
               onChange={(e) => onUpdateCV?.({ tailleTitreSectionValeur: parseFloat(e.target.value) })}
               className="w-full accent-indigo-600 cursor-pointer"
             />
@@ -383,9 +383,71 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             />
           </div>
 
+          {/* Marge Pied de Page (margePiedDePagePx - Anti-Chevauchement) */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-between text-[11px] font-bold">
+              <span>Marge Pied de Page (Marche sous le texte)</span>
+              <span className="text-purple-600 font-mono font-bold">{cv?.margePiedDePagePx ?? 35} px</span>
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Espace réglable pour empêcher le chevauchement du texte du CV avec le pied de page.
+            </p>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              step={5}
+              value={cv?.margePiedDePagePx ?? 35}
+              onChange={(e) => onUpdateCV?.({ margePiedDePagePx: parseInt(e.target.value, 10) })}
+              className="w-full accent-purple-600 cursor-pointer"
+            />
+          </div>
+
+          {/* Style d'En-tête du Modèle */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Style d'en-tête du modèle :</span>
+            <select
+              value={cv?.styleEnTete || 'banner'}
+              onChange={(e) => onUpdateCV?.({ styleEnTete: e.target.value as any })}
+              className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+            >
+              <optgroup label="🎨 En-têtes à 2 Couleurs (Bicolores)">
+                <option value="two-tone-split">Deux Couleurs — Séparation Nette (Split)</option>
+                <option value="two-tone-stripe">Deux Couleurs — Bandeau Supérieur & Accent</option>
+                <option value="baxter-diagonal">Deux Couleurs — Diagonale Orange & Anthracite</option>
+                <option value="modern-split">Deux Couleurs — Double Colonne (Modern Split)</option>
+                <option value="diagonal-split">Deux Couleurs — Coupe Diagonale High-Tech</option>
+              </optgroup>
+              <optgroup label="🌊 En-têtes avec Vagues (Wave)">
+                <option value="wave-bottom">Vague Inférieure Fluide (Wave Bottom)</option>
+                <option value="wave-top">Vague Supérieure Incurvée (Wave Top)</option>
+                <option value="wave-double">Double Vague Bicolore Fluide</option>
+                <option value="ocean-wave">Vague Aquatique / Océan</option>
+                <option value="curved-wave-badge">Onde Organique & Badge Portrait</option>
+                <option value="sylvie-wave">Style Sylvie Loiseau (Vague & Sidebar)</option>
+              </optgroup>
+              <optgroup label="✨ En-têtes Normaux & Simples">
+                <option value="clean">Normal & Épuré Editorial (Clean)</option>
+                <option value="simple-minimal">Normal & Simple Aéré (Ligne Fine)</option>
+                <option value="centered-clean">Normal & Centré Équilibré</option>
+                <option value="minimal">Minimaliste Pur Sans Fond</option>
+                <option value="executive-stripe">Exécutif Sobre avec Liseré</option>
+              </optgroup>
+              <optgroup label="🏛️ Autres Formats">
+                <option value="banner">Bannière Classique (Banner)</option>
+                <option value="card">Carte En-tête Encadrée (Card)</option>
+                <option value="arch">Arche Supérieure / Arqué</option>
+                <option value="tech-dark-band">Bande Sombre High-Tech</option>
+                <option value="tech-arches">Terminal Développeur High-Tech</option>
+                <option value="luxury-gold">Ruban Or & Prestige Executive</option>
+                <option value="sidebar-top">Intégré dans la Sidebar</option>
+              </optgroup>
+            </select>
+          </div>
+
           {/* Style d'En-tête de Section */}
           <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
-            <span className="text-[10px] font-bold text-slate-500 block">Style d'en-tête de section:</span>
+            <span className="text-[10px] font-bold text-slate-500 block">Style des titres de section :</span>
             <select
               value={cv?.styleEnTeteSection || 'underline'}
               onChange={(e) => onUpdateCV?.({ styleEnTeteSection: e.target.value as any })}
@@ -399,6 +461,147 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               <option value="minimal">Minimaliste</option>
               <option value="double-line">Double ligne</option>
               <option value="arch-block">Bloc arrondi</option>
+              <option value="badge-header">Badge icône</option>
+              <option value="badge-line">Ligne avec badge</option>
+            </select>
+          </div>
+
+          {/* Personnalisation Complète du Bandeau / Ruban Décoratif */}
+          <div className="space-y-2.5 p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-purple-600 dark:text-purple-400 flex items-center gap-1.5 uppercase tracking-wide">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Personnalisation du Bandeau & Ruban</span>
+              </span>
+            </div>
+
+            {/* Forme / Motif du Bandeau */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 block">Forme & Style du bandeau :</span>
+              <select
+                value={cv?.formeSidebarDecor || 'straight'}
+                onChange={(e) => onUpdateCV?.({ formeSidebarDecor: e.target.value as any })}
+                className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+              >
+                <option value="wave-cut">Vagues Aquatiques Fluides (Wave Cut)</option>
+                <option value="diagonal-cut">Polygones Biseautés / Géométrique Étudiant</option>
+                <option value="arch-top">Arche Supérieure Arrondie (Arch Top)</option>
+                <option value="card-float">Carte Flottante Suspendue (Card Float)</option>
+                <option value="straight">Bandeau Droit Standard (Straight)</option>
+              </select>
+            </div>
+
+            {/* Position du Bandeau */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-500 block">Position du bandeau / sidebar :</span>
+              <select
+                value={cv?.positionSidebar || 'gauche'}
+                onChange={(e) => onUpdateCV?.({ positionSidebar: e.target.value as any })}
+                className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+              >
+                <option value="gauche">Marge Gauche (Standard)</option>
+                <option value="droite">Marge Droite (Inversé)</option>
+              </select>
+            </div>
+
+            {/* Opacité du Bandeau / Ruban */}
+            <div className="space-y-1">
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
+                <span>Opacité du bandeau :</span>
+                <span className="text-purple-600 font-black">{Math.round((cv?.ribbonOpacite ?? 1) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={cv?.ribbonOpacite ?? 1}
+                onChange={(e) => onUpdateCV?.({ ribbonOpacite: parseFloat(e.target.value) })}
+                className="w-full accent-purple-600"
+              />
+            </div>
+
+            {/* Couleurs du Bandeau */}
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200 dark:border-slate-700">
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 block mb-1">Couleur Primaire :</span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    value={cv?.couleurAccent || '#E08D69'}
+                    onChange={(e) => onUpdateCV?.({ couleurAccent: e.target.value })}
+                    className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+                  />
+                  <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">{cv?.couleurAccent || '#E08D69'}</span>
+                </div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-500 block mb-1">Couleur Secondaire :</span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    value={cv?.couleurAccentSecondaire || '#0B2545'}
+                    onChange={(e) => onUpdateCV?.({ couleurAccentSecondaire: e.target.value })}
+                    className="w-6 h-6 rounded cursor-pointer border-0 p-0"
+                  />
+                  <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">{cv?.couleurAccentSecondaire || '#0B2545'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Style d'Affichage des Compétences */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Style d'affichage des compétences :</span>
+            <select
+              value={cv?.styleCompetences || 'progress'}
+              onChange={(e) => onUpdateCV?.({ styleCompetences: e.target.value as any })}
+              className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+            >
+              <option value="progress">Barres de progression (Jauges horizontales)</option>
+              <option value="badges-multicolor">Badges bicolores harmonisés (Primaire / Secondaire)</option>
+              <option value="badges">Badges pleins contrastés</option>
+              <option value="pill-bars">Pilules de niveau avec barres (Pill-bars)</option>
+              <option value="tags">Étiquettes modernes compactes (Tags)</option>
+              <option value="cards-modern">Cartes modernes encadrées (Cards Modern)</option>
+              <option value="tech-cards">Cartes techniques avec puces (Tech Cards)</option>
+              <option value="icon-card-grid">Cartes avec icônes (Icon Cards Grid)</option>
+              <option value="grid">Grille de compétences structurée (Grid)</option>
+              <option value="grid-3">Grille dense à 3 colonnes (Grid 3)</option>
+              <option value="minimal-cards">Cartes épurées (Minimal Cards)</option>
+              <option value="striped-table">Tableau rayé bicolore (Striped Table)</option>
+              <option value="stars">Étoiles de niveau (5 Stars ★★★★★)</option>
+              <option value="circular-progress">Cercles de progression circulaire (%)</option>
+            </select>
+          </div>
+
+          {/* Style Ligne du Temps (Timeline) */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Axe / Ligne du Temps (Timeline) :</span>
+            <select
+              value={cv?.timelineStyle || 'none'}
+              onChange={(e) => onUpdateCV?.({ timelineStyle: e.target.value as any })}
+              className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+            >
+              <option value="none">Aucune ligne du temps</option>
+              <option value="line-dots">Axe vertical avec puces (Dots Timeline)</option>
+              <option value="left-bar">Barre verticale accentuée</option>
+              <option value="accent-pills">Pilules d'accentuation</option>
+            </select>
+          </div>
+
+          {/* Style des Badges Coordonnées & Contact */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Style des icônes de coordonnées :</span>
+            <select
+              value={cv?.styleBadgesCoordonnees || 'none'}
+              onChange={(e) => onUpdateCV?.({ styleBadgesCoordonnees: e.target.value as any })}
+              className="w-full p-1.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 font-bold text-xs"
+            >
+              <option value="none">Icônes alignées simples</option>
+              <option value="filled-circle">Cercles d'icônes remplis</option>
+              <option value="light-square">Carrés d'icônes arrondis</option>
+              <option value="outlined">Icônes cerclées de bordures</option>
             </select>
           </div>
         </div>
@@ -490,6 +693,54 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             </div>
           </div>
 
+          {/* Accent Secondaire */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Couleur Accent Secondaire :</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={cv?.couleurAccentSecondaire || '#F1F5F9'}
+                onChange={(e) => onUpdateCV?.({ couleurAccentSecondaire: e.target.value })}
+                className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+              />
+              <div className="flex flex-wrap gap-1">
+                {['#F1F5F9', '#38BDF8', '#F59E0B', '#10B981', '#EC4899', '#6366F1', '#0F172A'].map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurAccentSecondaire: hex })}
+                    className="w-5 h-5 rounded-full border border-black/20 hover:scale-110 transition-transform cursor-pointer shadow-2xs"
+                    style={{ backgroundColor: hex }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Fond de Sidebar */}
+          <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 block">Couleur Fond de Sidebar :</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={cv?.couleurFondSidebar || '#F8FAFC'}
+                onChange={(e) => onUpdateCV?.({ couleurFondSidebar: e.target.value })}
+                className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+              />
+              <div className="flex flex-wrap gap-1">
+                {['#F8FAFC', '#E0F2F1', '#2D2F36', '#0A2540', '#133842', '#222222', '#1E293B'].map((bg) => (
+                  <button
+                    key={bg}
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurFondSidebar: bg })}
+                    className="w-5 h-5 rounded-md border border-slate-300 shadow-2xs hover:scale-110 transition-transform cursor-pointer"
+                    style={{ backgroundColor: bg }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Page Background */}
           <div className="space-y-1 pt-1 border-t border-slate-200 dark:border-slate-700">
             <span className="text-[10px] font-bold text-slate-500 block">Fond de Page CV :</span>
@@ -517,6 +768,157 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     title={bg}
                   />
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* En-tête : Fond & Couleurs Spécifiques */}
+          <div className="space-y-2 pt-2 border-t-2 border-slate-200 dark:border-slate-700">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+              Couleurs de l'En-tête (Profil) :
+            </span>
+
+            {/* Fond En-tête */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Fond du bloc en-tête :</span>
+                {cv?.couleurFondProfil && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurFondProfil: undefined })}
+                    className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Auto / Défaut
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={cv?.couleurFondProfil || cv?.couleurAccent || '#FFFFFF'}
+                  onChange={(e) => onUpdateCV?.({ couleurFondProfil: e.target.value })}
+                  className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {['#FFFFFF', '#0A2540', '#0F172A', '#1E40AF', '#0D9488', '#EA580C', 'transparent'].map((bg) => (
+                    <button
+                      key={bg}
+                      type="button"
+                      onClick={() => onUpdateCV?.({ couleurFondProfil: bg })}
+                      className="w-5 h-5 rounded border border-slate-300 hover:scale-110 transition-transform cursor-pointer shadow-2xs"
+                      style={{ backgroundColor: bg === 'transparent' ? '#FFFFFF' : bg }}
+                      title={bg === 'transparent' ? 'Transparent' : bg}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Couleur Nom / Prénom */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Couleur Nom / Prénom :</span>
+                {cv?.couleurTitrePrincipal && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurTitrePrincipal: undefined })}
+                    className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Auto
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={cv?.couleurTitrePrincipal || '#0F172A'}
+                  onChange={(e) => onUpdateCV?.({ couleurTitrePrincipal: e.target.value })}
+                  className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {['#FFFFFF', '#0F172A', '#1E40AF', '#0D9488', '#EA580C', '#D97706'].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => onUpdateCV?.({ couleurTitrePrincipal: hex })}
+                      className="w-5 h-5 rounded-full border border-slate-300 hover:scale-110 transition-transform cursor-pointer shadow-2xs"
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Couleur Titre de Poste / Sous-titre */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Couleur Titre de Poste (Sous-titre) :</span>
+                {cv?.couleurSousTitrePrincipal && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurSousTitrePrincipal: undefined })}
+                    className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Auto
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={cv?.couleurSousTitrePrincipal || cv?.couleurAccentSecondaire || '#38BDF8'}
+                  onChange={(e) => onUpdateCV?.({ couleurSousTitrePrincipal: e.target.value })}
+                  className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {['#38BDF8', '#F59E0B', '#10B981', '#64748B', '#FFFFFF', '#0284C7'].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => onUpdateCV?.({ couleurSousTitrePrincipal: hex })}
+                      className="w-5 h-5 rounded-full border border-slate-300 hover:scale-110 transition-transform cursor-pointer shadow-2xs"
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Couleur Texte général Profil */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500">Texte général profil & résumé :</span>
+                {cv?.couleurTexteProfil && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateCV?.({ couleurTexteProfil: undefined })}
+                    className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Auto
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={cv?.couleurTexteProfil || '#334155'}
+                  onChange={(e) => onUpdateCV?.({ couleurTexteProfil: e.target.value })}
+                  className="w-7 h-7 rounded-lg cursor-pointer border-0 bg-transparent shrink-0"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {['#FFFFFF', '#E2E8F0', '#0F172A', '#334155', '#475569'].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => onUpdateCV?.({ couleurTexteProfil: hex })}
+                      className="w-5 h-5 rounded border border-slate-300 hover:scale-110 transition-transform cursor-pointer shadow-2xs"
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -723,7 +1125,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               {(content?.items || []).map((it: any, idx: number) => {
                 const itemObj = typeof it === 'string' ? { id: `item-${idx}`, text: it, level: 0 } : it;
                 return (
-                  <div key={itemObj.id || idx} className="flex items-center space-x-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-lg">
+                  <div key={itemObj.id || `prop-item-${idx}`} className="flex items-center space-x-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-lg">
                     <input
                       type="text"
                       value={itemObj.text || ''}

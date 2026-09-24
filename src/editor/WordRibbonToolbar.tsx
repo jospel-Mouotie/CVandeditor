@@ -87,6 +87,7 @@ import {
 import { CVElement, ElementType, ShapeType, ListType } from '../types/document';
 import { CV, Section } from '../types';
 import { getTranslation, getLocalizedTemplateName } from '../i18n/translations';
+import { printCV } from '../utils/pdfExport';
 
 export type RibbonTab =
   | 'fichier'
@@ -131,6 +132,7 @@ interface WordRibbonToolbarProps {
   onOpenProfileEditor?: () => void;
   onOpenPresetElementsModal?: () => void;
   onExportPDF: () => void;
+  onPrint?: () => void;
   onSaveCV: () => void;
   autoSaveStatus?: 'saved' | 'saving' | 'error';
   onToggleViewMode?: (mode: 'visual' | 'form') => void;
@@ -194,6 +196,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
   onOpenProfileEditor,
   onOpenPresetElementsModal,
   onExportPDF,
+  onPrint,
   onSaveCV,
   autoSaveStatus,
   onToggleViewMode,
@@ -545,7 +548,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
                 <span className="text-[10px] mt-0.5">Exporter PDF</span>
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={() => (onPrint ? onPrint() : printCV('cv-preview-container'))}
                 className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold flex flex-col items-center cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
@@ -1594,14 +1597,14 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
                 className="px-3 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white font-extrabold rounded-xl text-xs flex items-center space-x-1.5 shadow-md cursor-pointer hover:opacity-95"
               >
                 <Layout className="w-4 h-4 text-amber-300 shrink-0" />
-                <span>Changer de Modèle CV (30 Modèles)</span>
+                <span>Changer de Modèle CV (Famille Ribbon & 30+ Modèles)</span>
                 <ChevronDown className="w-3.5 h-3.5 shrink-0" />
               </button>
 
-              {/* Direct Horizontal Strip of 6 Popular Models for 1-Click Switch */}
-              <div className="hidden lg:flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-1">Direct :</span>
-                {['modele-1', 'modele-2', 'modele-3', 'modele-4', 'modele-5', 'modele-6', 'modele-7'].map((presetKey) => {
+              {/* Direct Horizontal Strip of Ribbon & Popular Models for 1-Click Switch */}
+              <div className="hidden xl:flex items-center space-x-1 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mr-1">Ribbons :</span>
+                {['ribbon-classic', 'ribbon-green', 'ribbon-blue', 'ribbon-emerald', 'ribbon-burgundy', 'ribbon-orange', 'ribbon-purple'].map((presetKey) => {
                   const p = TEMPLATE_PRESETS[presetKey];
                   if (!p) return null;
                   const isActive = cv?.templateId === presetKey;
@@ -1622,18 +1625,18 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
                       title={`Appliquer ${p.titre} (Garde vos données)`}
                     >
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.couleurAccent }} />
-                      <span>{p.titre.split('—')[0]}</span>
+                      <span>{p.titre}</span>
                     </button>
                   );
                 })}
               </div>
 
               {showTemplatesGallery && (
-                <div className="absolute left-0 top-full mt-1.5 w-[420px] p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[9999] text-xs max-h-96 overflow-y-auto">
+                <div className="absolute left-0 top-full mt-1.5 w-[460px] p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-[9999] text-xs max-h-96 overflow-y-auto">
                   <div className="font-black text-slate-900 dark:text-slate-100 pb-1.5 border-b mb-2 flex justify-between items-center">
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span>Galerie Visuelle des 30 Modèles de CV</span>
+                      <span>Galerie des Modèles de CV (Famille Ribbon & Pro)</span>
                     </span>
                     <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold">Données 100% Conservées</span>
                   </div>
@@ -1676,18 +1679,135 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
 
             {/* Color Palettes Gallery [GALERIE VISUELLE] */}
             <div className="px-3 flex items-center space-x-1.5">
-              <span className="text-[11px] font-bold text-slate-500">Palettes de Thèmes :</span>
+              <span className="text-[11px] font-bold text-slate-500">Palettes Duo :</span>
               {COLOR_PALETTES.map((pal) => (
                 <button
                   key={pal.name}
-                  onClick={() => onApplyThemeColor?.(pal.main)}
+                  onClick={() => {
+                    onUpdateCV?.({
+                      couleurAccent: pal.main,
+                      couleurAccentSecondaire: pal.sub,
+                      couleurFondSidebar: pal.bg,
+                      couleurTitreSection: pal.main
+                    });
+                    onApplyThemeColor?.(pal.main);
+                  }}
                   className="w-6 h-6 rounded-full border-2 border-white shadow-xs hover:scale-110 transition-transform cursor-pointer relative flex overflow-hidden"
-                  title={pal.name}
+                  title={`${pal.name} (Primaire: ${pal.main}, Secondaire: ${pal.sub})`}
                 >
                   <div className="w-1/2 h-full" style={{ backgroundColor: pal.main }} />
                   <div className="w-1/2 h-full" style={{ backgroundColor: pal.sub }} />
                 </button>
               ))}
+            </div>
+
+            {/* Couleurs Bicolores : Primaire, Inverser, Secondaire */}
+            <div className="px-3 flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
+                <span className="text-[10px] font-bold text-slate-500">Primaire:</span>
+                <input
+                  type="color"
+                  value={cv?.couleurAccent || '#1E3A8A'}
+                  onChange={(e) => {
+                    onUpdateCV?.({ couleurAccent: e.target.value, couleurTitreSection: e.target.value });
+                    onApplyThemeColor?.(e.target.value);
+                  }}
+                  className="w-6 h-6 rounded cursor-pointer border border-slate-300 dark:border-slate-700 p-0"
+                  title="Couleur Primaire"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (cv && onUpdateCV) {
+                    const currentPrim = cv.couleurAccent;
+                    const currentSec = cv.couleurAccentSecondaire || '#3B82F6';
+                    onUpdateCV({
+                      couleurAccent: currentSec,
+                      couleurAccentSecondaire: currentPrim,
+                      couleurTitreSection: currentSec
+                    });
+                    onApplyThemeColor?.(currentSec);
+                  }
+                }}
+                className="px-2 py-1 text-slate-700 dark:text-slate-200 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-[10px] font-extrabold flex items-center gap-1 border border-slate-200 dark:border-slate-700 cursor-pointer shadow-2xs"
+                title="Inverser les deux couleurs du CV (Primaire ⇄ Secondaire)"
+              >
+                <span>⇄</span>
+                <span>Inverser</span>
+              </button>
+
+              <div className="flex items-center space-x-1">
+                <span className="text-[10px] font-bold text-slate-500">Secondaire:</span>
+                <input
+                  type="color"
+                  value={cv?.couleurAccentSecondaire || '#3B82F6'}
+                  onChange={(e) => onUpdateCV?.({ couleurAccentSecondaire: e.target.value })}
+                  className="w-6 h-6 rounded cursor-pointer border border-slate-300 dark:border-slate-700 p-0"
+                  title="Couleur Secondaire"
+                />
+              </div>
+            </div>
+
+            {/* Personnalisation de l'En-Tête CV */}
+            <div className="px-3 flex items-center space-x-1.5">
+              <span className="text-[10px] font-bold text-slate-500">En-tête:</span>
+              <select
+                value={cv?.styleEnTete || 'banner'}
+                onChange={(e) => onUpdateCV?.({ styleEnTete: e.target.value as any })}
+                className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
+              >
+                <optgroup label="🎨 2 Couleurs (Bicolores)">
+                  <option value="two-tone-split">2 Couleurs (Split net)</option>
+                  <option value="two-tone-stripe">2 Couleurs (Bandeau d'accent)</option>
+                  <option value="baxter-diagonal">2 Couleurs (Découpe Diagonale)</option>
+                  <option value="modern-split">2 Couleurs (Modern Split)</option>
+                </optgroup>
+                <optgroup label="🌊 Vagues (Wave)">
+                  <option value="wave-bottom">Vague Inférieure Fluide</option>
+                  <option value="wave-top">Vague Supérieure Incurvée</option>
+                  <option value="wave-double">Double Vague Bicolore</option>
+                  <option value="ocean-wave">Vague Aquatique / Océan</option>
+                  <option value="curved-wave-badge">Onde Organique Portrait</option>
+                  <option value="sylvie-wave">Vague Douce Sylvie</option>
+                </optgroup>
+                <optgroup label="✨ Normal & Simple">
+                  <option value="clean">Normal & Épuré Editorial</option>
+                  <option value="simple-minimal">Normal & Simple Aéré</option>
+                  <option value="centered-clean">Normal & Centré Équilibré</option>
+                  <option value="minimal">Minimaliste ATS</option>
+                  <option value="executive-stripe">Exécutif avec Liseré</option>
+                </optgroup>
+                <optgroup label="🏛️ Autres">
+                  <option value="banner">Bannière classique</option>
+                  <option value="card">Carte Flottante</option>
+                  <option value="arch">Arche Studio</option>
+                  <option value="sidebar-top">Intégrée en Colonne</option>
+                </optgroup>
+              </select>
+
+              <div className="flex items-center space-x-1">
+                <span className="text-[9px] font-bold text-slate-400">Fond:</span>
+                <input
+                  type="color"
+                  value={cv?.couleurFondProfil || cv?.couleurAccent || '#1E3A8A'}
+                  onChange={(e) => onUpdateCV?.({ couleurFondProfil: e.target.value })}
+                  className="w-5 h-5 rounded cursor-pointer border border-slate-300 dark:border-slate-700 p-0"
+                  title="Couleur de fond de l'en-tête"
+                />
+              </div>
+
+              <div className="flex items-center space-x-1">
+                <span className="text-[9px] font-bold text-slate-400">Texte:</span>
+                <input
+                  type="color"
+                  value={cv?.couleurTexteProfil || '#FFFFFF'}
+                  onChange={(e) => onUpdateCV?.({ couleurTexteProfil: e.target.value })}
+                  className="w-5 h-5 rounded cursor-pointer border border-slate-300 dark:border-slate-700 p-0"
+                  title="Couleur du texte de l'en-tête"
+                />
+              </div>
             </div>
 
             {/* Page Background */}
@@ -1820,14 +1940,14 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
             {/* Interligne Global du CV */}
             <div className="px-3 flex items-center space-x-2">
               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                Interligne ({(cv?.hauteurLigneValeur ?? 1.25).toFixed(2)}x) :
+                Interligne ({(cv?.hauteurLigneValeur ?? 1.5).toFixed(2)}x) :
               </span>
               <input
                 type="range"
                 min={0.6}
                 max={2.2}
                 step={0.05}
-                value={cv?.hauteurLigneValeur ?? 1.25}
+                value={cv?.hauteurLigneValeur ?? 1.5}
                 onChange={(e) => onUpdateCV?.({ hauteurLigneValeur: parseFloat(e.target.value) })}
                 className="w-24 accent-indigo-600 cursor-pointer"
                 title="Interligne global du CV"
@@ -1855,7 +1975,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
               <div className="flex items-center space-x-1">
                 <span className="text-[10px] font-bold text-slate-500">Titres:</span>
                 <select
-                  value={cv?.tailleTitreSectionValeur ?? 12}
+                  value={cv?.tailleTitreSectionValeur ?? 11}
                   onChange={(e) => onUpdateCV?.({ tailleTitreSectionValeur: parseFloat(e.target.value) })}
                   className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
                 >
@@ -1868,7 +1988,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
               <div className="flex items-center space-x-1">
                 <span className="text-[10px] font-bold text-slate-500">Corps:</span>
                 <select
-                  value={cv?.taillePoliceValeur ?? 10}
+                  value={cv?.taillePoliceValeur ?? 9}
                   onChange={(e) => onUpdateCV?.({ taillePoliceValeur: parseFloat(e.target.value) })}
                   className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
                 >
@@ -1881,7 +2001,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
 
             {/* Style d'En-tête de Section */}
             <div className="px-3 flex items-center space-x-1.5">
-              <span className="text-[10px] font-bold text-slate-500">En-têtes:</span>
+              <span className="text-[10px] font-bold text-slate-500">En-têtes sections:</span>
               <select
                 value={cv?.styleEnTeteSection || 'underline'}
                 onChange={(e) => onUpdateCV?.({ styleEnTeteSection: e.target.value as any })}
@@ -1895,6 +2015,44 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
                 <option value="minimal">Minimal</option>
                 <option value="double-line">Double Ligne</option>
                 <option value="arch-block">Bloc Arche</option>
+              </select>
+            </div>
+
+            {/* Style d'Affichage des Compétences */}
+            <div className="px-3 flex items-center space-x-1.5">
+              <span className="text-[10px] font-bold text-slate-500">Compétences:</span>
+              <select
+                value={cv?.styleCompetences || 'progress'}
+                onChange={(e) => onUpdateCV?.({ styleCompetences: e.target.value as any })}
+                className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
+              >
+                <option value="progress">Barres horizontales</option>
+                <option value="circular-progress">Jauges circulaires (%)</option>
+                <option value="badges">Badges pilules</option>
+                <option value="pill-bars">Barres bicolores</option>
+                <option value="dots">5 Pastilles (dots)</option>
+                <option value="stars">Étoiles</option>
+                <option value="list">Liste simple</option>
+                <option value="minimal-cards">Cartes minimales</option>
+                <option value="grid-3">Grille 3 colonnes</option>
+              </select>
+            </div>
+
+            {/* Puces de Listes */}
+            <div className="px-3 flex items-center space-x-1.5">
+              <span className="text-[10px] font-bold text-slate-500">Puces:</span>
+              <select
+                value={cv?.stylePucesListes || cv?.bulletStyle || 'disc'}
+                onChange={(e) => onUpdateCV?.({ stylePucesListes: e.target.value as any, bulletStyle: e.target.value as any })}
+                className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold"
+              >
+                <option value="disc">• Rondes standard</option>
+                <option value="check">✓ Coches validées</option>
+                <option value="star">✦ Étoiles</option>
+                <option value="arrow">➔ Flèches</option>
+                <option value="square">■ Carrés</option>
+                <option value="dash">— Tirets</option>
+                <option value="numbered">1. Numérotation</option>
               </select>
             </div>
           </div>
@@ -2097,7 +2255,7 @@ export const WordRibbonToolbar: React.FC<WordRibbonToolbarProps> = ({
               </button>
 
               <button
-                onClick={() => window.print()}
+                onClick={() => (onPrint ? onPrint() : printCV('cv-preview-container'))}
                 className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 font-bold rounded-xl flex items-center space-x-1.5 text-xs cursor-pointer"
               >
                 <Printer className="w-4 h-4 text-blue-600" />

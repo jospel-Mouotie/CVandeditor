@@ -248,7 +248,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onClick={() => onSelectElement(null)}
-      className="flex-1 bg-slate-200/80 dark:bg-slate-950 p-4 sm:p-8 overflow-auto flex flex-col items-center space-y-8 touch-pan-x touch-pan-y"
+      className="flex-1 bg-[#f5f5f5] dark:bg-[#0a0a0a] p-4 sm:p-8 overflow-auto flex flex-col items-center space-y-8 touch-pan-x touch-pan-y"
     >
       {document.pages.map((page, pageIdx) => {
         const isActivePage = page.id === activePageId;
@@ -256,13 +256,16 @@ export const Canvas: React.FC<CanvasProps> = ({
         return (
           <div
             key={page.id}
+            data-page-index={pageIdx + 1}
             onClick={(e) => {
               e.stopPropagation();
               onSelectPage(page.id);
             }}
-            className={`relative bg-white dark:bg-slate-900 shadow-2xl transition-all border shrink-0 ${
-              isActivePage ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-slate-300 dark:border-slate-800 opacity-95'
-            }`}
+            className={`cv-page-sheet relative bg-white dark:bg-black shadow-xl transition-all border shrink-0 ${
+              isActivePage 
+                ? 'border-black/40 dark:border-white/40' 
+                : 'border-black/10 dark:border-white/10'
+            } ${pageIdx < document.pages.length - 1 ? 'page-break-after-always' : ''}`}
             style={{
               width: `${page.width}px`,
               height: `${page.height}px`,
@@ -271,12 +274,13 @@ export const Canvas: React.FC<CanvasProps> = ({
               backgroundColor: page.background || '#FFFFFF'
             }}
           >
-            {/* Page Header Indicator */}
-            <div className="absolute -top-7 left-0 right-0 flex items-center justify-between px-1 text-[11px] font-black uppercase text-slate-500 tracking-wider print:hidden">
-              <span className={`px-2 py-0.5 rounded ${isActivePage ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-800'}`}>
-                Page {pageIdx + 1} / {document.pages.length} {isActivePage ? ' (Active)' : ''}
+            {/* Page Number - Minimal */}
+            <div className="absolute -top-6 left-0 right-0 flex items-center justify-between px-0.5 print:hidden">
+              <span className={`text-[9px] font-mono tracking-wider ${
+                isActivePage ? 'text-black dark:text-white' : 'text-black/30 dark:text-white/30'
+              }`}>
+                {pageIdx + 1}/{document.pages.length}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">A4 (210×297mm)</span>
             </div>
 
             {/* Grid Overlay */}
@@ -293,13 +297,13 @@ export const Canvas: React.FC<CanvasProps> = ({
             {/* Alignment Guides */}
             {guides.x !== undefined && (
               <div
-                className="absolute top-0 bottom-0 border-l-2 border-dashed border-red-500 z-50 pointer-events-none print:hidden"
+                className="absolute top-0 bottom-0 border-l-2 border-dashed border-black/50 dark:border-white/50 z-50 pointer-events-none print:hidden"
                 style={{ left: `${guides.x}px` }}
               />
             )}
             {guides.y !== undefined && (
               <div
-                className="absolute left-0 right-0 border-t-2 border-dashed border-red-500 z-50 pointer-events-none print:hidden"
+                className="absolute left-0 right-0 border-t-2 border-dashed border-black/50 dark:border-white/50 z-50 pointer-events-none print:hidden"
                 style={{ top: `${guides.y}px` }}
               />
             )}
@@ -321,7 +325,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                     transform: elem.rotation ? `rotate(${elem.rotation}deg)` : 'none',
                     zIndex: elem.zIndex || 10
                   }}
-                  className={`group cursor-move ${isSelected ? 'ring-2 ring-blue-600 shadow-lg' : ''}`}
+                  className={`group cursor-move ${
+                    isSelected ? 'ring-2 ring-black/50 dark:ring-white/50' : ''
+                  }`}
                 >
                   <ElementRenderer
                     element={elem}
@@ -339,53 +345,36 @@ export const Canvas: React.FC<CanvasProps> = ({
                     }}
                   />
 
-                  {/* 8 Resize Handles & Rotation Handle */}
+                  {/* Selection Handles */}
                   {isSelected && !elem.locked && (
                     <>
-                      {/* Rotation Handle Top */}
+                      {/* Rotation Handle */}
                       <div
                         onPointerDown={(e) => handlePointerDownRotateHandle(e, elem)}
-                        className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md z-50"
-                        title="Faire pivoter"
+                        className="absolute -top-6 left-1/2 -translate-x-1/2 w-4 h-4 bg-black dark:bg-white rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing shadow-md z-50 border border-white/20 dark:border-black/20"
                       >
-                        <RotateCw className="w-3 h-3" />
+                        <RotateCw className="w-2.5 h-2.5 text-white dark:text-black" />
                       </div>
 
-                      {/* 4 Corners */}
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'nw', elem)}
-                        className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-nwse-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'ne', elem)}
-                        className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-nesw-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'sw', elem)}
-                        className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-nesw-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'se', elem)}
-                        className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-nwse-resize shadow-md z-50"
-                      />
+                      {/* Corner Handles */}
+                      <div className="absolute -top-1 -left-1 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-nwse-resize shadow-md z-50" 
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'nw', elem)} />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-nesw-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'ne', elem)} />
+                      <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-nesw-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'sw', elem)} />
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-nwse-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'se', elem)} />
 
-                      {/* 4 Edges */}
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'n', elem)}
-                        className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-ns-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 's', elem)}
-                        className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-ns-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'w', elem)}
-                        className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-ew-resize shadow-md z-50"
-                      />
-                      <div
-                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'e', elem)}
-                        className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-ew-resize shadow-md z-50"
-                      />
+                      {/* Edge Handles */}
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-ns-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'n', elem)} />
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-ns-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 's', elem)} />
+                      <div className="absolute top-1/2 -left-1 -translate-y-1/2 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-ew-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'w', elem)} />
+                      <div className="absolute top-1/2 -right-1 -translate-y-1/2 w-3 h-3 bg-black dark:bg-white border border-white dark:border-black rounded-full cursor-ew-resize shadow-md z-50"
+                        onPointerDown={(e) => handlePointerDownResizeHandle(e, 'e', elem)} />
                     </>
                   )}
                 </div>
@@ -395,26 +384,25 @@ export const Canvas: React.FC<CanvasProps> = ({
         );
       })}
 
-      {/* Page Management Toolbar */}
-      <div className="flex items-center space-x-3 pt-4">
+      {/* Page Controls - Minimal */}
+      <div className="flex items-center gap-2 pt-2">
         <button
           onClick={onAddPage}
-          className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 font-bold text-xs rounded-xl flex items-center space-x-2 shadow-xs cursor-pointer text-slate-800 dark:text-slate-200"
+          className="px-3 py-1.5 bg-white dark:bg-black border border-black/20 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40 text-black dark:text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer"
         >
-          <Plus className="w-4 h-4 text-blue-600" />
-          <span>{lang === 'en' ? 'Add a Page' : lang === 'ar' ? 'إضافة صفحة' : 'Ajouter une Page'}</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Page</span>
         </button>
         {document.pages.length > 1 && (
           <button
             onClick={() => onRemovePage(document.pages[document.pages.length - 1].id)}
-            className="px-4 py-2 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900/50 font-bold text-xs rounded-xl flex items-center space-x-2 shadow-xs cursor-pointer text-red-600"
+            className="px-3 py-1.5 bg-white dark:bg-black border border-black/20 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white text-xs font-medium rounded transition-colors flex items-center gap-1.5 cursor-pointer"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>{lang === 'en' ? 'Delete Last Page' : lang === 'ar' ? 'حذف الصفحة الأخيرة' : 'Supprimer la dernière page'}</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Page</span>
           </button>
         )}
       </div>
-
     </div>
   );
 };

@@ -68,12 +68,12 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all mb-3 overflow-hidden ${
+      className={`bg-white dark:bg-black rounded-xl border transition-all mb-3 overflow-hidden ${
         isDragging 
-          ? 'border-blue-500 shadow-xl z-20 ring-2 ring-blue-500/20' 
+          ? 'border-black dark:border-white shadow-xl z-20 ring-2 ring-black/20 dark:ring-white/20' 
           : section.visible 
-            ? 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs' 
-            : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 opacity-75'
+            ? 'border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30 shadow-2xs' 
+            : 'border-black/10 dark:border-white/10 bg-neutral-50/70 dark:bg-neutral-900/50 opacity-75'
       }`}
     >
       {/* Header Bar - Entire row can be clicked to toggle expand */}
@@ -85,7 +85,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             onToggleExpand();
           }
         }}
-        className="flex items-center justify-between px-3 py-2.5 bg-slate-50/80 dark:bg-slate-950/60 border-b border-slate-100 dark:border-slate-800 select-none cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-900 transition-colors gap-2"
+        className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-neutral-950 border-b border-black/10 dark:border-white/10 select-none cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors gap-2"
       >
         
         {/* Left Drag Handle & Title Input */}
@@ -93,7 +93,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
           <button
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded transition-colors shrink-0"
+            className="cursor-grab active:cursor-grabbing p-1 text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded transition-colors shrink-0"
             title="Glisser pour réordonner"
             onClick={(e) => e.stopPropagation()}
           >
@@ -107,7 +107,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
                 type="button"
                 disabled={isFirst}
                 onClick={onMoveUp}
-                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-25 disabled:hover:text-slate-500 rounded transition-colors"
+                className="p-1 text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-25 disabled:hover:text-neutral-500 rounded transition-colors"
                 title="Déplacer la section vers le haut"
               >
                 <ArrowUp className="w-3.5 h-3.5" />
@@ -118,7 +118,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
                 type="button"
                 disabled={isLast}
                 onClick={onMoveDown}
-                className="p-1 text-slate-500 hover:text-blue-600 hover:bg-slate-200 dark:hover:bg-slate-800 disabled:opacity-25 disabled:hover:text-slate-500 rounded transition-colors"
+                className="p-1 text-neutral-500 hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 disabled:opacity-25 disabled:hover:text-neutral-500 rounded transition-colors"
                 title="Déplacer la section vers le bas"
               >
                 <ArrowDown className="w-3.5 h-3.5" />
@@ -131,12 +131,12 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             value={section.titre}
             onChange={(e) => onUpdateTitle(e.target.value)}
             onClick={(e) => e.stopPropagation()}
-            className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm bg-transparent border border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 rounded px-1.5 py-0.5 outline-hidden transition-colors flex-1 truncate"
+            className="font-bold text-black dark:text-white text-xs sm:text-sm bg-transparent border border-transparent hover:border-black/20 dark:hover:border-white/20 focus:border-black dark:focus:border-white rounded px-1.5 py-0.5 outline-hidden transition-colors flex-1 truncate"
             placeholder="Titre de la section"
           />
 
           {!isExpanded && summary && (
-            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded-full shrink-0 hidden sm:inline">
+            <span className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-200/70 dark:bg-neutral-800 px-2 py-0.5 rounded-full shrink-0 hidden sm:inline">
               {summary}
             </span>
           )}
@@ -145,14 +145,14 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
         {/* Right Actions */}
         <div className="flex items-center space-x-1 shrink-0" onClick={(e) => e.stopPropagation()}>
           {onUpdateColonne && isTwoColumnMode && (
-            <div className="flex items-center bg-slate-200/60 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-300/60 dark:border-slate-700 text-[10px] font-bold">
+            <div className="flex items-center bg-neutral-200/60 dark:bg-neutral-800 p-0.5 rounded-lg border border-black/10 dark:border-white/10 text-[10px] font-bold">
               <button
                 type="button"
                 onClick={() => onUpdateColonne('gauche')}
                 className={`px-1.5 py-0.5 rounded transition-colors ${
                   section.colonne === 'gauche'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white'
                 }`}
                 title="Déplacer dans la Colonne Gauche (Latérale)"
               >
@@ -163,8 +163,8 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
                 onClick={() => onUpdateColonne('droite')}
                 className={`px-1.5 py-0.5 rounded transition-colors ${
                   section.colonne === 'droite'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                    ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white'
                 }`}
                 title="Déplacer dans la Colonne Droite (Principale)"
               >
@@ -178,7 +178,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             onClick={onToggleVisibility}
             title={section.visible ? 'Masquer la section' : 'Afficher la section'}
             className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-              section.visible ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-200/60 dark:hover:bg-slate-800' : 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50'
+              section.visible ? 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800' : 'text-neutral-400 bg-neutral-100 dark:bg-neutral-900'
             }`}
           >
             {section.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -188,7 +188,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             type="button"
             onClick={onDuplicate}
             title="Dupliquer cette section"
-            className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-neutral-500 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
           >
             <Copy className="w-4 h-4" />
           </button>
@@ -197,7 +197,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             type="button"
             onClick={onDelete}
             title="Supprimer la section"
-            className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -207,8 +207,8 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
             onClick={onToggleExpand}
             className={`p-1.5 rounded-lg transition-colors ml-0.5 cursor-pointer font-bold text-xs flex items-center gap-1 ${
               isExpanded
-                ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
-                : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 hover:bg-blue-100'
+                ? 'bg-neutral-200 dark:bg-neutral-800 text-black dark:text-white'
+                : 'bg-black dark:bg-white text-white dark:text-black hover:opacity-90'
             }`}
             title={isExpanded ? 'Réduire la section' : 'Déplier pour éditer'}
           >
@@ -221,7 +221,7 @@ export const SortableSectionItem: React.FC<SortableSectionItemProps> = ({
 
       {/* Section Content Area when expanded */}
       {isExpanded && (
-        <div className="p-4 bg-white dark:bg-slate-900 space-y-4 border-t border-slate-100 dark:border-slate-800 animate-fadeIn">
+        <div className="p-4 bg-white dark:bg-black space-y-4 border-t border-black/10 dark:border-white/10 animate-fadeIn">
           {children}
         </div>
       )}

@@ -75,9 +75,34 @@ export function convertLegacyCVToDocument(cv: CV): CVDocument {
   const sidebarX = cv.positionSidebar === 'droite' ? MARGIN + mainWidthPx + 16 : MARGIN;
   const mainX = cv.positionSidebar === 'droite' ? MARGIN : MARGIN + sidebarWidthPx + 16;
 
-  let currentYLeft = MARGIN;
-  let currentYMain = MARGIN;
-  let currentYSingle = MARGIN;
+  // Cursors to track per-page placement cleanly and prevent any text overlapping
+  interface PageCursor {
+    leftY: number;
+    mainY: number;
+    singleY: number;
+  }
+
+  const pageCursors: Record<number, PageCursor> = {};
+
+  const getPageCursor = (pageNum: number): PageCursor => {
+    if (!pageCursors[pageNum]) {
+      if (pageNum === 1) {
+        const topOffset = MARGIN + headerHeight + 16;
+        pageCursors[1] = {
+          leftY: isTwoColumn ? topOffset : MARGIN,
+          mainY: isTwoColumn ? topOffset : MARGIN,
+          singleY: isTwoColumn ? MARGIN : topOffset,
+        };
+      } else {
+        pageCursors[pageNum] = {
+          leftY: MARGIN + 12,
+          mainY: MARGIN + 12,
+          singleY: MARGIN + 12,
+        };
+      }
+    }
+    return pageCursors[pageNum];
+  };
 
   const pagesMap: Record<number, CVElement[]> = { 1: [] };
 
@@ -138,16 +163,12 @@ export function convertLegacyCVToDocument(cv: CV): CVDocument {
   };
 
   addElementToPage(headerElement, 1);
+  // Initialize Page 1 cursor with the header height accounted for
+  getPageCursor(1);
 
-  if (isTwoColumn) {
-    currentYLeft += headerHeight + 16;
-    currentYMain += headerHeight + 16;
-  } else {
-    currentYSingle += headerHeight + 16;
-  }
-
-  // 2. CONVERT SECTIONS TO ELEMENTS
+  // 2. CONVERT SECTIONS TO ELEMENTS (PRECISE MULTI-PAGE FLOW, ZERO OVERLAPPING)
   let zIndexCounter = 20;
+  const maxPageContentY = PAGE_HEIGHT - MARGIN - 12;
 
   cv.sections.forEach((sec) => {
     if (sec.type === 'profil' && !sec.contenu?.resume) {
@@ -158,39 +179,24 @@ export function convertLegacyCVToDocument(cv: CV): CVDocument {
     const estSidebar = isTwoColumn && (sec.colonne === 'gauche' || (sec.colonne !== 'droite' && sec.colonne !== 'principale' && cv.positionSidebar === 'gauche'));
     const xPos = isTwoColumn ? (estSidebar ? sidebarX : mainX) : MARGIN;
     const elemWidth = isTwoColumn ? (estSidebar ? sidebarWidthPx : mainWidthPx) : USABLE_WIDTH;
-
-    let elemY = isTwoColumn ? (estSidebar ? currentYLeft : currentYMain) : currentYSingle;
     const height = estimateSectionElementHeight(sec);
 
-    // Dynamic Multi-Page Loop
     let targetPageNum = 1;
-    let adjustedY = elemY;
-    const maxPageHeight = PAGE_HEIGHT - MARGIN - 10;
+    let cursor = getPageCursor(targetPageNum);
+    let elemY = isTwoColumn ? (estSidebar ? cursor.leftY : cursor.mainY) : cursor.singleY;
 
-    // Only allow page 2 if user explicitly configured 2_pages
-    const allowPage2 = cv.pageCibleMode === '2_pages';
-
-    if (allowPage2) {
-      while (adjustedY + Math.min(height, 120) > maxPageHeight) {
-        targetPageNum++;
-        adjustedY -= (PAGE_HEIGHT - MARGIN * 2);
-        if (adjustedY < MARGIN + 20) {
-          adjustedY = MARGIN + 20;
-        }
-      }
-    } else {
-      // Single Page Target: cap Y so element remains on Page 1
-      if (adjustedY + height > maxPageHeight) {
-        adjustedY = Math.min(adjustedY, maxPageHeight - height - 10);
-        if (adjustedY < MARGIN) adjustedY = MARGIN;
-      }
+    // Advance page until the section fits on the page without overflowing
+    while (elemY + Math.min(height, 70) > maxPageContentY && targetPageNum < 5) {
+      targetPageNum++;
+      cursor = getPageCursor(targetPageNum);
+      elemY = isTwoColumn ? (estSidebar ? cursor.leftY : cursor.mainY) : cursor.singleY;
     }
 
     const sectionElement: CVElement = {
       id: `elem-section-${sec.id}`,
       type: 'section',
       x: xPos,
-      y: adjustedY,
+      y: elemY,
       width: elemWidth,
       height: height,
       zIndex: zIndexCounter++,
@@ -217,12 +223,15 @@ export function convertLegacyCVToDocument(cv: CV): CVDocument {
 
     addElementToPage(sectionElement, targetPageNum);
 
-    // Increment Y position for next section
+    // Increment Y position for this page cursor sequentially (guarantees NO text overlap)
     if (isTwoColumn) {
-      if (estSidebar) currentYLeft += height + 16;
-      else currentYMain += height + 16;
+      if (estSidebar) {
+        cursor.leftY = elemY + height + 16;
+      } else {
+        cursor.mainY = elemY + height + 16;
+      }
     } else {
-      currentYSingle += height + 16;
+      cursor.singleY = elemY + height + 16;
     }
   });
 
@@ -269,11 +278,25 @@ export function convertLegacyCVToDocument(cv: CV): CVDocument {
       backgroundColor: cv.couleurFond,
       sidebarBackgroundColor: cv.couleurFondSidebar,
       textColor: cv.couleurTexte,
+      sidebarTextColor: cv.couleurTexteSidebar,
       headingColor: cv.couleurTitreSection,
+      sidebarHeadingColor: cv.couleurTitreSectionSidebar,
       headerStyle: cv.styleEnTete,
       sectionHeaderStyle: cv.styleEnTeteSection,
       skillsDisplayMode: cv.styleCompetences,
-      borderRadiusVal: cv.rayonBordure
+      skillsRatingMode: cv.styleNiveauCompetence as any,
+      borderRadiusVal: cv.rayonBordure,
+      borderWidthVal: cv.epaisseurBordure,
+      shadowVal: cv.ombre,
+      stylePucesListes: cv.stylePucesListes as any,
+      experienceDatesAlignment: cv.alignementDatesExperience as any,
+      cadrePhotoRing: cv.cadrePhotoRing as any,
+      decorativeLayers: cv.decorativeLayers,
+      afficherBadgesIcones: cv.afficherBadgesIcones,
+      decorBanniereCouleur2: cv.decorBanniereCouleur2,
+      photoFrameStyle: cv.photoForme,
+      photoBorderColor: cv.photoBordureCouleur,
+      photoBorderWidth: cv.photoBordureEpaisseur
     },
     pages,
     legacyData: cv
@@ -358,10 +381,20 @@ export function convertDocumentToLegacyCV(doc: CVDocument): CV {
     couleurFond: doc.theme.backgroundColor || baseCV.couleurFond,
     couleurFondSidebar: doc.theme.sidebarBackgroundColor || baseCV.couleurFondSidebar,
     couleurTexte: doc.theme.textColor || baseCV.couleurTexte,
+    couleurTexteSidebar: doc.theme.sidebarTextColor || baseCV.couleurTexteSidebar,
     couleurTitreSection: doc.theme.headingColor || baseCV.couleurTitreSection,
-    styleEnTete: doc.theme.headerStyle || baseCV.styleEnTete,
-    styleEnTeteSection: doc.theme.sectionHeaderStyle || baseCV.styleEnTeteSection,
-    styleCompetences: doc.theme.skillsDisplayMode || baseCV.styleCompetences,
+    couleurTitreSectionSidebar: doc.theme.sidebarHeadingColor || baseCV.couleurTitreSectionSidebar,
+    styleEnTete: (doc.theme.headerStyle || baseCV.styleEnTete) as any,
+    styleEnTeteSection: (doc.theme.sectionHeaderStyle || baseCV.styleEnTeteSection) as any,
+    styleCompetences: (doc.theme.skillsDisplayMode || baseCV.styleCompetences) as any,
+    styleNiveauCompetence: (doc.theme.skillsRatingMode || (baseCV as any).styleNiveauCompetence) as any,
+    decorativeLayers: doc.theme.decorativeLayers || baseCV.decorativeLayers,
+    cadrePhotoRing: (doc.theme.cadrePhotoRing || headerElem?.content?.cadrePhotoRing || baseCV.cadrePhotoRing) as any,
+    stylePucesListes: (doc.theme.stylePucesListes || baseCV.stylePucesListes) as any,
+    alignementDatesExperience: (doc.theme.experienceDatesAlignment || baseCV.alignementDatesExperience) as any,
+    afficherBadgesIcones: doc.theme.afficherBadgesIcones ?? baseCV.afficherBadgesIcones,
+    rayonBordure: doc.theme.borderRadiusVal ?? baseCV.rayonBordure,
+    epaisseurBordure: doc.theme.borderWidthVal ?? baseCV.epaisseurBordure,
     police: doc.settings.defaultFont || baseCV.police || 'Inter',
     hauteurLigneValeur: baseCV.hauteurLigneValeur,
     taillePoliceValeur: baseCV.taillePoliceValeur,
@@ -375,7 +408,7 @@ export function convertDocumentToLegacyCV(doc: CVDocument): CV {
     photoPosition: headerElem?.content?.photoPosition || baseCV.photoPosition,
     photoBordureCouleur: headerElem?.content?.photoBordureCouleur || baseCV.photoBordureCouleur,
     photoBordureEpaisseur: headerElem?.content?.photoBordureEpaisseur ?? baseCV.photoBordureEpaisseur,
-    cadrePhotoRing: headerElem?.content?.cadrePhotoRing || baseCV.cadrePhotoRing,
+    pageCibleMode: doc.pages.length > 1 ? '2_pages' : (baseCV.pageCibleMode || '1_page'),
     sections: updatedSections,
     updatedAt: new Date().toISOString()
   };

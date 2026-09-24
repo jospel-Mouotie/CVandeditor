@@ -210,3 +210,74 @@ export function sanitizeDomColorsForCanvas(element: HTMLElement): () => void {
     });
   };
 }
+
+/**
+ * Resolves a guaranteed high-contrast, visually pleasing text color for the job title / subtitle
+ * to prevent it from matching or blending into the header / profile / sidebar background color.
+ */
+export function resolveSubtitleColor(
+  bgHex?: string,
+  userCustomColor?: string,
+  primaryAccent?: string,
+  secondaryAccent?: string
+): string {
+  const effectiveBg = (bgHex && bgHex.trim() !== '' && bgHex !== 'transparent') ? bgHex : '#FFFFFF';
+
+  // 1. If user provided a custom color, check if it has acceptable contrast with the background
+  if (userCustomColor && userCustomColor.trim() !== '') {
+    try {
+      const contrast = getContrastRatio(userCustomColor, effectiveBg);
+      if (contrast >= 2.5) {
+        return userCustomColor;
+      }
+    } catch {
+      // ignore parsing error and continue to fallback
+    }
+  }
+
+  // Determine if background is dark or light
+  const isDark = getLuminance(effectiveBg) < 0.45;
+
+  if (isDark) {
+    // On dark / saturated colored backgrounds (e.g. Navy, Royal Blue, Dark Slate, Emerald, Purple):
+    // Check if secondary accent has high contrast (>= 3.2:1)
+    if (secondaryAccent && secondaryAccent !== 'transparent' && secondaryAccent !== '#FFFFFF') {
+      try {
+        const secContrast = getContrastRatio(secondaryAccent, effectiveBg);
+        if (secContrast >= 3.2) {
+          return secondaryAccent;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    // High-visibility crisp soft-white / light slate
+    return '#E2E8F0';
+  } else {
+    // On light / white backgrounds:
+    // Check if primary accent has high contrast (>= 3.0:1)
+    if (primaryAccent && primaryAccent !== 'transparent' && primaryAccent !== '#FFFFFF') {
+      try {
+        const primContrast = getContrastRatio(primaryAccent, effectiveBg);
+        if (primContrast >= 3.0) {
+          return primaryAccent;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    // Check secondary accent
+    if (secondaryAccent && secondaryAccent !== 'transparent' && secondaryAccent !== '#FFFFFF') {
+      try {
+        const secContrast = getContrastRatio(secondaryAccent, effectiveBg);
+        if (secContrast >= 3.0) {
+          return secondaryAccent;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    // High-visibility slate-600
+    return '#475569';
+  }
+}

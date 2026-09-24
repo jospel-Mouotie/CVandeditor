@@ -30,9 +30,13 @@ export const AIAssistantModal: React.FC<AIAssistantModalProps> = ({
     setResultText('');
 
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/reformuler-experience', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           texteOriginal: inputText,
           langue

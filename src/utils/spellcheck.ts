@@ -21,9 +21,13 @@ export interface SpellError {
 export async function checkTextWithAi(text: string, lang: Language): Promise<AiSpellError[]> {
   if (!text || text.trim().length === 0) return [];
   try {
+    const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
     const res = await fetch('/api/correction', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
       body: JSON.stringify({ texte: text, langue: lang })
     });
     if (!res.ok) return [];

@@ -235,7 +235,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
             <div className="space-y-1">
               {items.map((item: any, idx: number) => (
                 <div
-                  key={item.id || idx}
+                  key={item.id || `el-item-${idx}`}
                   className="flex items-start space-x-2 text-xs"
                   style={{ paddingLeft: `${(item.level || 0) * 16}px` }}
                 >
@@ -448,7 +448,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
             </h3>
             <div className="space-y-2">
               {items.map((it: any, idx: number) => (
-                <div key={idx} className="space-y-0.5 text-xs">
+                <div key={it.id || `el-exp-${idx}`} className="space-y-0.5 text-xs">
                   <div className="flex justify-between font-bold text-slate-800 dark:text-slate-100">
                     <span>{it.poste}</span>
                     <span className="text-slate-500 font-normal">{it.date}</span>
@@ -480,7 +480,7 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
             </h3>
             <div className="space-y-2">
               {items.map((it: any, idx: number) => (
-                <div key={idx} className="space-y-0.5 text-xs">
+                <div key={it.id || `el-edu-${idx}`} className="space-y-0.5 text-xs">
                   <div className="flex justify-between font-bold text-slate-800 dark:text-slate-100">
                     <span>{it.diplome}</span>
                     <span className="text-slate-500 font-normal">{it.date}</span>
@@ -575,36 +575,6 @@ export const ElementRenderer: React.FC<ElementRendererProps> = ({
                 )}
               </tbody>
             </table>
-          </div>
-        );
-      }
-
-      case 'shape': {
-        const shapeType = content?.shapeType || style?.shapeType || 'rectangle';
-        const bg = style?.backgroundColor || '#3B82F6';
-        let radius = '0px';
-        if (shapeType === 'rounded') radius = '12px';
-        if (shapeType === 'circle') radius = '9999px';
-        if (shapeType === 'badge') radius = '9999px';
-
-        return (
-          <div
-            className="w-full h-full flex items-center justify-center p-2 text-white font-bold text-center transition-all shadow-xs"
-            style={{
-              backgroundColor: bg,
-              borderRadius: radius,
-              opacity: style?.opacity ?? 1,
-              border: style?.borderColor ? `${style.borderWidth || 1}px solid ${style.borderColor}` : undefined
-            }}
-          >
-            <span
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={(e) => onContentChange?.({ ...content, label: e.currentTarget.innerText })}
-              className="outline-none"
-            >
-              {content?.label || ''}
-            </span>
           </div>
         );
       }

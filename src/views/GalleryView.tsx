@@ -1,204 +1,276 @@
-import React, { useState } from 'react';
-import { CVTemplate, Language, TemplateCategory } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { CVTemplate, Language, TemplateCategory, SubscriptionTier } from '../types';
 import { CV_TEMPLATES } from '../data/templates';
+import { FREE_TEMPLATE_IDS } from '../utils/subscriptionGates';
 import { TemplateCard } from '../components/TemplateCard';
 import { TemplatePreviewModal } from '../components/TemplatePreviewModal';
 import { TemplateModeModal } from '../components/TemplateModeModal';
 import { getTranslation } from '../i18n/translations';
-import { Search, Sparkles, FilePlus, ArrowRight, Plus } from 'lucide-react';
-
+import { Search, Sparkles, FilePlus, ArrowRight, Plus, X, Loader2 } from 'lucide-react';
 import { CV } from '../types';
 
 interface GalleryViewProps {
   langue: Language;
+  userTier?: SubscriptionTier;
   onSelectTemplate: (template: CVTemplate, mode?: 'visual' | 'form') => void;
   onCreateBlankCV?: () => void;
   activeCV?: CV | null;
   onApplyToActiveCV?: (template: CVTemplate) => void;
+  onOpenUpgradeModal?: () => void;
 }
 
-export const GalleryView: React.FC<GalleryViewProps> = ({ langue, onSelectTemplate, onCreateBlankCV, activeCV, onApplyToActiveCV }) => {
+export const GalleryView: React.FC<GalleryViewProps> = ({
+  langue,
+  userTier = 'freemium',
+  onSelectTemplate,
+  onCreateBlankCV,
+  activeCV,
+  onApplyToActiveCV,
+  onOpenUpgradeModal
+}) => {
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(langue, key);
 
-  const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<TemplateCategory | 'all' | 'free'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewTemplate, setPreviewTemplate] = useState<CVTemplate | null>(null);
   const [modeModalTemplate, setModeModalTemplate] = useState<CVTemplate | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const categories: Array<{ id: TemplateCategory | 'all'; label: string }> = [
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 220);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const categories: Array<{ id: TemplateCategory | 'all' | 'free'; label: string }> = [
     { id: 'all', label: t('catAll') },
+    { id: 'free', label: langue === 'ar' ? 'نماذج مجانية' : 'Gratuits' },
     { id: 'moderne', label: t('catModerne') },
     { id: 'classique', label: t('catClassique') },
     { id: 'creatif', label: t('catCreatif') },
     { id: 'executif', label: t('catExecutif') },
-    { id: 'technique', label: 'Technique & IT' }
+    { id: 'technique', label: 'Technique & IT' },
+    { id: 'academique', label: 'Académique' }
   ];
 
-  const filteredTemplates = CV_TEMPLATES.filter(tpl => {
-    const matchesCategory = selectedCategory === 'all' || tpl.category === selectedCategory;
-    const desc = tpl.description[langue] || tpl.description.fr;
-    const matchesSearch = 
-      tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      desc.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredTemplates = useMemo(() => {
+    return CV_TEMPLATES.filter(tpl => {
+      let matchesCategory = true;
+      if (selectedCategory === 'free') {
+        matchesCategory = FREE_TEMPLATE_IDS.includes(tpl.id);
+      } else if (selectedCategory !== 'all') {
+        matchesCategory = tpl.category === selectedCategory;
+      }
 
-    return matchesCategory && matchesSearch;
-  });
+      const desc = typeof tpl.description === 'string' ? tpl.description : (tpl.description[langue] || tpl.description.fr || '');
+      const matchesSearch = 
+        tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        desc.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [selectedCategory, searchQuery, langue]);
 
   const handleTemplatePicked = (template: CVTemplate) => {
     onSelectTemplate(template, 'form');
   };
 
+  const getCategoryCount = (categoryId: string) => {
+    if (categoryId === 'all') return CV_TEMPLATES.length;
+    if (categoryId === 'free') return CV_TEMPLATES.filter(t => FREE_TEMPLATE_IDS.includes(t.id)).length;
+    return CV_TEMPLATES.filter(t => t.category === categoryId).length;
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       
-      {/* Gallery Banner Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-lg border border-slate-800 space-y-4 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-3 max-w-2xl">
-          <div className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-bold border border-blue-400/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{t('catalogHD')}</span>
-          </div>
-          
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">{t('chooseYourModelTitle')}</h1>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            {t('chooseYourModelDesc')}
+      {/* Header - Clean & Minimal */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-black/10 dark:border-white/10">
+        <div>
+          <h1 className="text-2xl font-light text-black dark:text-white tracking-wide">
+            {langue === 'en' ? 'Templates' : langue === 'ar' ? 'القوالب' : 'Modèles'}
+          </h1>
+          <p className="text-sm text-black/50 dark:text-white/50 font-light mt-1">
+            {filteredTemplates.length} {langue === 'en' ? 'available' : langue === 'ar' ? 'متاح' : 'disponibles'}
           </p>
         </div>
-
         {onCreateBlankCV && (
-          <div className="shrink-0">
-            <button
-              onClick={onCreateBlankCV}
-              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs rounded-2xl shadow-xl transition-all flex items-center space-x-2 border border-emerald-400/30 cursor-pointer"
-            >
-              <FilePlus className="w-4 h-4" />
-              <span>{t('createBlankPage')}</span>
-            </button>
-          </div>
+          <button
+            onClick={onCreateBlankCV}
+            className="group px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-sm font-medium rounded-lg transition-all duration-200 hover:bg-black/80 dark:hover:bg-white/80 flex items-center gap-2 whitespace-nowrap"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{langue === 'en' ? 'Blank Canvas' : langue === 'ar' ? 'صفحة بيضاء' : 'Page vierge'}</span>
+          </button>
         )}
       </div>
 
-      {/* Active CV Change Notice Banner */}
-      {activeCV && onApplyToActiveCV && (
-        <div className="bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-blue-900/90 border border-purple-500/40 text-white p-3.5 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-500/20 rounded-xl text-amber-300 border border-purple-400/30 shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs font-black flex items-center gap-2">
-                <span>{t('currentEditedCV')}</span>
-                <span className="bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-md border border-purple-400/30">{activeCV.titreCV || activeCV.titre || 'Mon CV'}</span>
-              </div>
-              <p className="text-[11px] text-purple-200 mt-0.5">
-                {t('applyToMyCVDesc')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Filter Pills & Search */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs">
-        
+      {/* Filters - Clean & Minimal */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
         {/* Category Pills */}
-        <div className="flex flex-wrap gap-1.5 w-full md:w-auto">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                selectedCategory === cat.id
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                  : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-1.5 w-full lg:w-auto">
+          {categories.map(cat => {
+            const count = getCategoryCount(cat.id);
+            const isActive = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-black text-white dark:bg-white dark:text-black'
+                    : 'bg-black/5 dark:bg-white/5 text-black/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10'
+                }`}
+              >
+                <span className="flex items-center gap-1.5">
+                  {cat.label}
+                  <span className={`text-[10px] ${isActive ? 'opacity-70' : 'opacity-50'}`}>
+                    {count}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Search Field */}
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+        <div className="relative w-full lg:w-64 flex-shrink-0">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30" />
           <input
             type="text"
             placeholder={t('searchTemplatePlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl focus:border-blue-500 outline-hidden"
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            className={`w-full pl-9 pr-8 py-1.5 text-sm bg-transparent border rounded-lg text-black dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30 transition-all duration-200 outline-none ${
+              isSearchFocused
+                ? 'border-black/40 dark:border-white/40'
+                : 'border-black/20 dark:border-white/20 hover:border-black/30 dark:hover:border-white/30'
+            }`}
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-
       </div>
 
-      {/* Compact Templates Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-        {filteredTemplates.map(tpl => (
-          <TemplateCard
-            key={tpl.id}
-            template={tpl}
-            langue={langue}
-            onSelect={handleTemplatePicked}
-            onPreviewModal={setPreviewTemplate}
-            onApplyToActiveCV={onApplyToActiveCV}
-          />
-        ))}
+      {/* Templates Grid - Wide 320px+ Edge-to-Edge Display */}
+      {isInitialLoading ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 sm:gap-8 pt-2">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              className="rounded-2xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] p-5 space-y-4 animate-pulse min-h-[420px] flex flex-col justify-between"
+            >
+              <div className="w-full h-72 bg-black/5 dark:bg-white/5 rounded-xl flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-6 h-6 text-black/30 dark:text-white/30 animate-spin" />
+                <span className="text-xs text-black/40 dark:text-white/40 font-light">Chargement du modèle...</span>
+              </div>
+              <div className="space-y-2">
+                <div className="h-4 bg-black/10 dark:bg-white/10 rounded w-3/4"></div>
+                <div className="h-3 bg-black/5 dark:bg-white/5 rounded w-1/2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 sm:gap-8 pt-2">
+          {filteredTemplates.map((tpl, index) => (
+            <div
+              key={tpl.id}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 40}ms` }}
+            >
+              <TemplateCard
+                template={tpl}
+                langue={langue}
+                userTier={userTier}
+                onSelect={handleTemplatePicked}
+                onPreviewModal={setPreviewTemplate}
+                onApplyToActiveCV={onApplyToActiveCV}
+                onOpenUpgradeModal={onOpenUpgradeModal}
+              />
+            </div>
+          ))}
 
-        {/* Special Action Card: CREATE MY OWN MODEL / BLANK CANVAS */}
+        {/* Special Action Card - Minimal Black & White */}
         {onCreateBlankCV && (
           <div
             onClick={onCreateBlankCV}
-            className="group rounded-3xl bg-gradient-to-b from-blue-50/70 via-white to-indigo-50/50 dark:from-slate-800/90 dark:via-slate-900 dark:to-indigo-950/50 border-2 border-dashed border-blue-400/60 dark:border-blue-600/60 hover:border-blue-600 dark:hover:border-blue-400 p-6 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer shadow-xs hover:shadow-xl hover:-translate-y-1 min-h-[380px] space-y-4"
+            className="group relative rounded-lg border-2 border-dashed border-black/20 dark:border-white/20 hover:border-black/40 dark:hover:border-white/40 p-8 flex flex-col items-center justify-center text-center transition-all duration-300 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02] min-h-[380px]"
           >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:scale-110 group-hover:rotate-3 transition-transform">
-              <FilePlus className="w-8 h-8" />
+            <div className="space-y-4">
+              <div className="w-16 h-16 rounded-full border-2 border-black/20 dark:border-white/20 flex items-center justify-center mx-auto group-hover:border-black/40 dark:group-hover:border-white/40 transition-colors">
+                <FilePlus className="w-7 h-7 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
+              </div>
+
+              <div className="space-y-2 max-w-[240px] mx-auto">
+                <span className="inline-block px-3 py-0.5 rounded-full text-[10px] font-medium tracking-wider uppercase border border-black/10 dark:border-white/10 text-black/50 dark:text-white/50">
+                  {langue === 'en' ? 'Blank Canvas' : langue === 'ar' ? 'صفحة بيضاء' : 'Page vierge'}
+                </span>
+
+                <h3 className="text-base font-medium text-black dark:text-white">
+                  {langue === 'en' ? 'Start from Scratch' : langue === 'ar' ? 'ابدأ من الصفر' : 'Partez de zéro'}
+                </h3>
+
+                <p className="text-sm text-black/50 dark:text-white/50 leading-relaxed font-light">
+                  {langue === 'en'
+                    ? 'Create your CV with complete freedom'
+                    : langue === 'ar'
+                    ? 'أنشئ سيرتك الذاتية بحرية كاملة'
+                    : 'Créez votre CV en toute liberté'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="px-5 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-sm font-medium transition-all duration-200 hover:bg-black/80 dark:hover:bg-white/80"
+              >
+                {langue === 'en' ? 'Create' : langue === 'ar' ? 'أنشئ' : 'Créer'}
+              </button>
             </div>
-
-            <div className="space-y-2 max-w-[240px]">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 shadow-2xs">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                {langue === 'en' ? 'Blank Canvas' : langue === 'ar' ? 'صفحة بيضاء' : 'Page Vierge'}
-              </span>
-
-              <h3 className="text-base font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                {langue === 'en' ? 'Create My Own Model' : langue === 'ar' ? 'إنشاء نموذجي الخاص' : 'Créer mon propre modèle'}
-              </h3>
-
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                {langue === 'en'
-                  ? 'Start directly on a clean blank page and design your CV from scratch with full creative control.'
-                  : langue === 'ar'
-                  ? 'ابدأ مباشرة على صفحة بيضاء نظيفة وصمّم سيرتك الذاتية من الصفر بحرية إبداعية كاملة.'
-                  : 'Démarrez directement sur une page blanche et créez votre propre modèle avec une liberté totale.'}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="mt-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold shadow-md shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{langue === 'en' ? 'Open Blank Page' : langue === 'ar' ? 'فتح صفحة بيضاء' : 'Ouvrir page blanche'}</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-            </button>
           </div>
         )}
       </div>
+      )}
 
-      {/* Full Screen Template Preview Modal */}
+      {/* Empty State */}
+      {filteredTemplates.length === 0 && (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 mx-auto border-2 border-black/10 dark:border-white/10 rounded-full flex items-center justify-center mb-4">
+            <Search className="w-6 h-6 text-black/30 dark:text-white/30" />
+          </div>
+          <h3 className="text-base font-medium text-black dark:text-white">
+            {langue === 'en' ? 'No templates found' : langue === 'ar' ? 'لم يتم العثور على قوالب' : 'Aucun modèle trouvé'}
+          </h3>
+          <p className="text-sm text-black/50 dark:text-white/50 mt-1 font-light">
+            {langue === 'en' ? 'Try adjusting your search' : langue === 'ar' ? 'حاول تعديل بحثك' : 'Essayez d\'ajuster votre recherche'}
+          </p>
+        </div>
+      )}
+
+      {/* Modals */}
       {previewTemplate && (
         <TemplatePreviewModal
           template={previewTemplate}
           langue={langue}
+          userTier={userTier}
           isOpen={!!previewTemplate}
           onClose={() => setPreviewTemplate(null)}
           onSelect={handleTemplatePicked}
+          onOpenUpgradeModal={onOpenUpgradeModal}
         />
       )}
 
-      {/* Mode Choice Modal (Visual Editor vs Form) */}
       {modeModalTemplate && (
         <TemplateModeModal
           template={modeModalTemplate}
@@ -212,6 +284,23 @@ export const GalleryView: React.FC<GalleryViewProps> = ({ langue, onSelectTempla
         />
       )}
 
+      {/* Custom Animations */}
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in-up {
+          animation: fadeInUp 0.4s ease-out forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 };

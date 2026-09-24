@@ -137,7 +137,7 @@ export const SpellCheckField: React.FC<SpellCheckFieldProps> = ({
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative w-full">
         {multiline ? (
           <textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -146,7 +146,7 @@ export const SpellCheckField: React.FC<SpellCheckFieldProps> = ({
             spellCheck={true}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 text-sm text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className={`w-full px-3.5 py-2.5 text-sm text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${value ? '!pr-9' : ''}`}
           />
         ) : (
           <input
@@ -156,15 +156,27 @@ export const SpellCheckField: React.FC<SpellCheckFieldProps> = ({
             spellCheck={true}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 text-sm text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className={`w-full px-3.5 py-2.5 text-sm text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-hidden transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 ${value ? '!pr-9' : ''}`}
           />
+        )}
+
+        {Boolean(value) && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            title="Effacer le texte"
+            aria-label="Effacer le texte"
+            className={`absolute right-2.5 ${multiline ? 'top-2.5' : 'top-1/2 -translate-y-1/2'} p-1 rounded-full text-slate-400 dark:text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer z-10`}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         )}
 
         {/* AI Error Pill Suggestions */}
         {aiErrors.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-1.5">
             {aiErrors.map((err, idx) => (
-              <div key={idx} className="relative inline-block">
+              <div key={`ai-err-${err.motOriginal}-${idx}`} className="relative inline-block">
                 <button
                   type="button"
                   onClick={() => setActiveError(activeError?.motOriginal === err.motOriginal ? null : err)}

@@ -235,8 +235,8 @@ export const EditorChoiceModal: React.FC<EditorChoiceModalProps> = ({
                       }}
                       className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 transition-all cursor-pointer group flex flex-col justify-between space-y-2 hover:shadow-md"
                     >
-                      <div className="h-32 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-700 relative flex items-start justify-center">
-                        <div className="w-[794px] h-[1122px] origin-top transform scale-[0.16] pointer-events-none select-none bg-white">
+                      <div className="h-36 rounded-xl overflow-hidden bg-white border border-slate-200 dark:border-slate-700 relative flex items-start justify-center">
+                        <div className="w-[794px] h-[1122px] origin-top transform scale-[0.23] pointer-events-none select-none bg-white shrink-0">
                           <CVPreview cv={miniCv} interactivePreview={false} />
                         </div>
                         <div 

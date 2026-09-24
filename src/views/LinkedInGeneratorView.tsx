@@ -8,9 +8,7 @@ import {
   FileText, 
   RefreshCw, 
   ArrowLeft, 
-  Briefcase, 
   Tag, 
-  Eye, 
   Check
 } from 'lucide-react';
 
@@ -57,77 +55,88 @@ export const LinkedInGeneratorView: React.FC<LinkedInGeneratorViewProps> = ({
 
     setIsLoading(true);
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/linkedin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           cv: selectedCV,
           langue
         })
       });
 
-      if (!res.ok) throw new Error('Erreur lors de la génération');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la génération du profil LinkedIn');
+      }
+
       const data: LinkedInOptimizationResult = await res.json();
       setResult(data);
       showToast('Profil LinkedIn optimisé généré avec succès !');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error generating LinkedIn profile:', err);
-      showToast('Une erreur est survenue lors de la génération.');
+      showToast(err.message || 'Une erreur est survenue lors de la génération.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
-      {/* Toast */}
+      {/* Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 dark:bg-slate-800 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-bounce border border-slate-700">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+        <div className="fixed bottom-6 right-6 z-50 bg-black dark:bg-white text-white dark:text-black px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-bold border border-neutral-700 dark:border-neutral-300">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
           <span>{toast}</span>
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
-              <Linkedin className="w-6 h-6" />
+      {/* Top Action Bar (Clean Black & White) */}
+      <div className="flex items-center justify-between gap-4 pb-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onGoToDashboard}
+            className="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-black dark:text-white transition-all cursor-pointer border border-neutral-300 dark:border-neutral-700"
+            title="Retour au tableau de bord"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-black text-white dark:bg-white dark:text-black">
+              <Linkedin className="w-4 h-4" />
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-                Optimisation Profil LinkedIn Pro
-              </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Transformez votre CV en profil LinkedIn influent, optimisé pour l'algorithme et les recruteurs.
-              </p>
-            </div>
+            <h1 className="text-base sm:text-lg font-black uppercase tracking-wider text-black dark:text-white">
+              Générateur LinkedIn
+            </h1>
           </div>
         </div>
 
         <button
           type="button"
           onClick={onGoToDashboard}
-          className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all flex items-center gap-1.5 w-fit cursor-pointer"
+          className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-black dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-xl font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-3.5 h-3.5" />
           <span>Tableau de bord</span>
         </button>
       </div>
 
       {/* Selector & Generator Action Card */}
-      <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-6">
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-sky-500" />
-            <span>Sélectionnez le CV à convertir en profil LinkedIn</span>
+      <div className="bg-white dark:bg-neutral-950 p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-4">
+        <div className="space-y-1.5">
+          <label className="text-xs font-black uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-2">
+            <FileText className="w-3.5 h-3.5 text-black dark:text-white" />
+            <span>Sélectionnez le CV source</span>
           </label>
           <select
             value={selectedCVId}
             onChange={(e) => setSelectedCVId(e.target.value)}
-            className="w-full px-4 py-3 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-2xl focus:border-sky-500 outline-hidden font-medium"
+            className="w-full px-3.5 py-2.5 text-xs bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-black dark:text-white rounded-xl focus:border-black dark:focus:border-white outline-hidden font-medium"
           >
             {cvs.map(c => (
               <option key={c.id} value={c.id}>
@@ -141,114 +150,111 @@ export const LinkedInGeneratorView: React.FC<LinkedInGeneratorViewProps> = ({
           type="button"
           onClick={handleGenerateLinkedIn}
           disabled={isLoading}
-          className="w-full py-3.5 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-black text-xs rounded-2xl shadow-lg shadow-sky-500/25 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+          className="w-full py-3 bg-black hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 border border-black dark:border-white"
         >
           {isLoading ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Optimisation algorithmique LinkedIn en cours...</span>
+              <span>Génération du profil LinkedIn en cours...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Générer mon Titre, Bio & Expériences LinkedIn Pro</span>
+              <Sparkles className="w-4 h-4" />
+              <span>Générer Titre, Bio & Expériences LinkedIn</span>
             </>
           )}
         </button>
       </div>
 
-      {/* Results Display */}
+      {/* Results Display (Strict Black & White Minimalist) */}
       {result && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="space-y-4 animate-in fade-in duration-150">
           
           {/* 1. Headline / Titre Professionnel */}
-          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="bg-white dark:bg-neutral-950 p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded-md border border-sky-200 dark:border-sky-800">
+                <span className="text-[10px] font-black uppercase text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700">
                   Titre du Profil (Headline)
                 </span>
-                <span className="text-[11px] text-slate-400">Positionnement & Mots-clés</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleCopy(result.titreProfil, 'headline')}
-                className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60"
+                className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 transition-all"
               >
                 {copiedKey === 'headline' ? (
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Copié !
                   </span>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Copier le titre</span>
+                    <span>Copier</span>
                   </>
                 )}
               </button>
             </div>
-            <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800">
+            <p className="text-xs sm:text-sm font-extrabold text-black dark:text-white p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
               {result.titreProfil}
             </p>
           </div>
 
           {/* 2. About / Résumé Bio */}
-          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+          <div className="bg-white dark:bg-neutral-950 p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded-md border border-sky-200 dark:border-sky-800">
+                <span className="text-[10px] font-black uppercase text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700">
                   Section "Infos" (Bio / Résumé)
                 </span>
-                <span className="text-[11px] text-slate-400">Storytelling professionnel</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleCopy(result.resumeBio, 'about')}
-                className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60"
+                className="text-xs font-bold text-black dark:text-white flex items-center gap-1.5 cursor-pointer px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 transition-all"
               >
                 {copiedKey === 'about' ? (
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Copié !
                   </span>
                 ) : (
                   <>
                     <Copy className="w-3.5 h-3.5" />
-                    <span>Copier la bio</span>
+                    <span>Copier</span>
                   </>
                 )}
               </button>
             </div>
-            <div className="p-4 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+            <div className="p-4 sm:p-5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs sm:text-sm text-black dark:text-white whitespace-pre-wrap leading-relaxed">
               {result.resumeBio}
             </div>
           </div>
 
           {/* 3. Experiences Bullet Points */}
           {result.experiencesLinkedIn && result.experiencesLinkedIn.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded-md border border-sky-200 dark:border-sky-800">
+            <div className="bg-white dark:bg-neutral-950 p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-3">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-black uppercase text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700">
                   Expériences Clés Reformulées
                 </span>
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Descriptions axées sur les résultats</h3>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3 pt-1">
                 {result.experiencesLinkedIn.map((exp, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-2">
+                  <div key={`li-exp-${idx}`} className="p-3.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="font-extrabold text-xs text-slate-900 dark:text-white">{exp.titrePoste}</p>
+                      <p className="font-black text-xs text-black dark:text-white">{exp.titrePoste}</p>
                       <button
                         type="button"
                         onClick={() => handleCopy(exp.pointsCles.join('\n'), `exp-${idx}`)}
-                        className="text-[11px] font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer"
+                        className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white flex items-center gap-1 cursor-pointer"
                       >
-                        {copiedKey === `exp-${idx}` ? 'Copié !' : 'Copier les puces'}
+                        {copiedKey === `exp-${idx}` ? 'Copié !' : 'Copier'}
                       </button>
                     </div>
-                    <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300 list-disc list-inside">
+                    <ul className="space-y-1 text-xs text-neutral-700 dark:text-neutral-300 list-disc list-inside">
                       {exp.pointsCles.map((pt, pIdx) => (
-                        <li key={pIdx} className="leading-relaxed">{pt}</li>
+                        <li key={`li-pt-${idx}-${pIdx}`} className="leading-relaxed">{pt}</li>
                       ))}
                     </ul>
                   </div>
@@ -259,26 +265,26 @@ export const LinkedInGeneratorView: React.FC<LinkedInGeneratorViewProps> = ({
 
           {/* 4. SEO Keywords Badges */}
           {result.motsClesRecommandes && result.motsClesRecommandes.length > 0 && (
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+            <div className="bg-white dark:bg-neutral-950 p-5 sm:p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-sky-500" />
-                  <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">Mots-clés Algorithmiques Recommandés</h3>
+                  <Tag className="w-3.5 h-3.5 text-black dark:text-white" />
+                  <h3 className="text-xs font-black uppercase text-black dark:text-white tracking-wider">Mots-clés Recommandés</h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleCopy(result.motsClesRecommandes.join(', '), 'keywords')}
-                  className="text-xs font-bold text-sky-600 hover:text-sky-700 cursor-pointer"
+                  className="text-xs font-bold text-black dark:text-white hover:underline cursor-pointer"
                 >
                   Tout copier
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {result.motsClesRecommandes.map((mot, idx) => (
                   <span
-                    key={idx}
+                    key={`li-kw-${mot}-${idx}`}
                     onClick={() => handleCopy(mot, `kw-${idx}`)}
-                    className="px-3 py-1.5 text-xs font-extrabold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 rounded-xl cursor-pointer hover:scale-105 transition-transform"
+                    className="px-2.5 py-1 text-xs font-bold bg-neutral-100 dark:bg-neutral-900 text-black dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-lg cursor-pointer hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all"
                     title="Cliquez pour copier"
                   >
                     #{mot}
@@ -290,14 +296,14 @@ export const LinkedInGeneratorView: React.FC<LinkedInGeneratorViewProps> = ({
 
           {/* 5. Visibility Advice */}
           {result.conseilsVisibilite && result.conseilsVisibilite.length > 0 && (
-            <div className="p-6 rounded-3xl bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2 text-xs text-amber-900 dark:text-amber-200">
-              <h4 className="font-extrabold flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                <span>Conseils pour maximiser les vues recruteurs</span>
+            <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2 text-xs text-black dark:text-white">
+              <h4 className="font-black uppercase tracking-wider flex items-center gap-2 text-[11px]">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Conseils pour maximiser la visibilité</span>
               </h4>
-              <ul className="space-y-1 list-disc list-inside text-amber-800 dark:text-amber-300">
+              <ul className="space-y-1 list-disc list-inside text-neutral-700 dark:text-neutral-300">
                 {result.conseilsVisibilite.map((c, idx) => (
-                  <li key={idx}>{c}</li>
+                  <li key={`li-adv-${idx}`}>{c}</li>
                 ))}
               </ul>
             </div>

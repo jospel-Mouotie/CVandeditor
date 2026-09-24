@@ -16,8 +16,11 @@ import {
   ExternalLink,
   Target,
   FileCheck,
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
+import { LetterPreviewModal } from '../components/LetterPreviewModal';
+import { printLetterDocument, exportLetterToWord, exportLetterToPlainText } from '../utils/pdfExport';
 
 interface LettersDashboardViewProps {
   letters?: SavedLetter[];
@@ -54,12 +57,16 @@ export const LettersDashboardView: React.FC<LettersDashboardViewProps> = ({
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [previewModalLetter, setPreviewModalLetter] = useState<SavedLetter | null>(null);
 
   // Fetch letters from API if not supplied
   const fetchLetters = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/lettres');
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
+      const res = await fetch('/api/lettres', {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
       if (res.ok) {
         const data = await res.json();
         setLettersList(data.letters || []);
@@ -137,9 +144,13 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
         onRenameLetter(renameTarget.id, newTitleInput.trim());
       } else {
         try {
+          const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
           await fetch(`/api/lettres/${renameTarget.id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({ titre: newTitleInput.trim() })
           });
           setLettersList(prev => prev.map(l => l.id === renameTarget.id ? { ...l, titre: newTitleInput.trim() } : l));
@@ -158,7 +169,11 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
         onDeleteLetter(deleteTarget.id);
       } else {
         try {
-          await fetch(`/api/lettres/${deleteTarget.id}`, { method: 'DELETE' });
+          const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
+          await fetch(`/api/lettres/${deleteTarget.id}`, {
+            method: 'DELETE',
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+          });
           setLettersList(prev => prev.filter(l => l.id !== deleteTarget.id));
         } catch (e) {
           console.error(e);
@@ -174,7 +189,11 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
       onDuplicateLetter(letterId);
     } else {
       try {
-        const res = await fetch(`/api/lettres/${letterId}/duplicate`, { method: 'POST' });
+        const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
+        const res = await fetch(`/api/lettres/${letterId}/duplicate`, {
+          method: 'POST',
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.letter) {
@@ -192,46 +211,7 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
     if (onPrintLetter) {
       onPrintLetter(letter);
     } else {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>${letter.titre}</title>
-              <style>
-                @page { size: A4; margin: 20mm; }
-                body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; line-height: 1.6; color: #1e293b; }
-                .expediteur { margin-bottom: 25px; }
-                .destinataire { margin-left: 55%; margin-bottom: 25px; }
-                .ville-date { margin-bottom: 25px; text-align: right; }
-                .objet { font-weight: bold; margin-bottom: 20px; text-decoration: underline; }
-                .content { white-space: pre-wrap; margin-bottom: 30px; }
-                .signature { margin-top: 30px; margin-left: 55%; font-weight: bold; }
-              </style>
-            </head>
-            <body>
-              <div class="expediteur">
-                <strong>${letter.expediteur?.nomComplet || ''}</strong><br/>
-                ${letter.expediteur?.adresse ? letter.expediteur.adresse + '<br/>' : ''}
-                ${letter.expediteur?.telephone ? letter.expediteur.telephone + ' | ' : ''}${letter.expediteur?.email || ''}
-              </div>
-              <div class="destinataire">
-                <strong>${letter.entreprise || ''}</strong><br/>
-                ${letter.destinataire || 'Direction des Ressources Humaines'}
-              </div>
-              <div class="ville-date">${letter.villeDate || ''}</div>
-              <div class="objet">Objet : ${letter.objet || 'Candidature'}</div>
-              <div class="content">${letter.texteComplet || `${letter.formulePolitesseEntree || 'Madame, Monsieur,'}\n\n${letter.paragrapheAccroche || ''}\n\n${letter.paragrapheValeurAjoutee || ''}\n\n${letter.paragrapheAdequationEntreprise || ''}\n\n${letter.paragrapheConclusion || ''}\n\n${letter.formulePolitesseSortie || 'Cordialement,'}`}</div>
-              <div class="signature">${letter.signature || letter.expediteur?.nomComplet || ''}</div>
-              <script>
-                window.onload = function() { window.print(); }
-              </script>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
+      printLetterDocument(letter);
     }
   };
 
@@ -395,24 +375,35 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
                 <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-100 dark:border-slate-800 space-y-2">
                   
                   {/* Primary Buttons */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewModalLetter(letter)}
+                      className="w-full bg-slate-900 dark:bg-slate-100 hover:bg-black dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-2xs"
+                      title="Prévisualiser la lettre au format A4"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Aperçu</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => onEditLetter(letter)}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-2xs"
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-2xs"
+                      title="Éditer et modifier les textes"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>Éditer & Peaufiner</span>
+                      <span>Éditer</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handlePrint(letter)}
-                      className="w-full bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+                      className="w-full bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center space-x-1 cursor-pointer"
                       title="Imprimer ou enregistrer en PDF A4"
                     >
-                      <Printer className="w-3.5 h-3.5 text-indigo-300" />
-                      <span>Imprimer PDF</span>
+                      <Printer className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>PDF</span>
                     </button>
                   </div>
 
@@ -532,6 +523,20 @@ ${letter.signature || letter.expediteur?.nomComplet || ''}`;
           </div>
         </div>
       )}
+
+      {/* Real-time A4 Letter Preview Modal */}
+      <LetterPreviewModal
+        letter={previewModalLetter}
+        isOpen={!!previewModalLetter}
+        onClose={() => setPreviewModalLetter(null)}
+        onEdit={(letter) => {
+          setPreviewModalLetter(null);
+          onEditLetter(letter);
+        }}
+        onPrint={(letter) => {
+          handlePrint(letter);
+        }}
+      />
     </div>
   );
 };

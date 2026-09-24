@@ -1,6 +1,7 @@
 import React from 'react';
 import { CV, Section, CVTemplate } from '../types';
 import { CV_TEMPLATES } from '../data/templates';
+import { TEMPLATE_PRESETS } from '../data/templatePresets';
 
 /**
  * Shared helper to generate CSS style objects for background types (solid, gradient, pattern, image)
@@ -81,6 +82,8 @@ export function getBackgroundStyle(
  */
 export function remapContentToTemplate(cv: CV, targetTemplate: CVTemplate): CV {
   const newTemplateId = targetTemplate.id;
+  const preset = TEMPLATE_PRESETS[newTemplateId];
+
   const isTargetTwoColumn = targetTemplate.layoutFamily === 'two-column-left' || targetTemplate.layoutFamily === 'two-column-right';
   const targetCols: 1 | 2 = isTargetTwoColumn ? 2 : 1;
   const targetSidePosition: 'gauche' | 'droite' = targetTemplate.layoutFamily === 'two-column-right' ? 'droite' : 'gauche';
@@ -91,7 +94,7 @@ export function remapContentToTemplate(cv: CV, targetTemplate: CVTemplate): CV {
     if (targetCols === 1) {
       newCol = 'principale';
     } else {
-      if (['competences', 'langues', 'profil', 'interets', 'coordonnees'].includes(sec.type)) {
+      if (['competences', 'langues', 'profil', 'interets', 'coordonnees', 'qualites', 'references', 'certifications'].includes(sec.type) || (sec.type === 'personnalisee' && !sec.titre?.toLowerCase().includes('projet') && !sec.titre?.toLowerCase().includes('exp'))) {
         newCol = 'gauche';
       } else {
         newCol = 'droite';
@@ -107,18 +110,35 @@ export function remapContentToTemplate(cv: CV, targetTemplate: CVTemplate): CV {
   return {
     ...cv,
     templateId: newTemplateId,
-    couleurAccent: targetTemplate.defaultAccent || cv.couleurAccent,
-    couleurAccentSecondaire: targetTemplate.defaultSecondaryAccent || cv.couleurAccentSecondaire,
-    police: targetTemplate.defaultFont || cv.police,
+    couleurAccent: preset?.couleurAccent || targetTemplate.defaultAccent || targetTemplate.themeConfig?.primaryColor || '#0284C7',
+    couleurAccentSecondaire: preset?.couleurAccentSecondaire || targetTemplate.defaultSecondaryAccent || targetTemplate.themeConfig?.secondaryColor || '#0EA5E9',
+    couleurFondSidebar: preset?.couleurFondSidebar || targetTemplate.themeConfig?.sidebarBackgroundColor || (targetCols === 2 ? '#F8FAFC' : '#FFFFFF'),
+    couleurFond: preset?.couleurFond || targetTemplate.themeConfig?.backgroundColor || '#FFFFFF',
+    couleurFondProfil: preset?.couleurFondProfil || targetTemplate.themeConfig?.headerBackgroundColor || preset?.couleurAccent || targetTemplate.defaultAccent || '#0284C7',
+    couleurTexteProfil: preset?.couleurTexteProfil || targetTemplate.themeConfig?.headerTextColor || '#FFFFFF',
+    couleurTitreSection: preset?.couleurTitreSection || targetTemplate.themeConfig?.headingColor || preset?.couleurAccent || targetTemplate.defaultAccent || '#0284C7',
+    couleurTexte: preset?.couleurTexte || targetTemplate.themeConfig?.textColor || '#1E293B',
+    couleurTexteSidebar: preset?.couleurTexteSidebar || targetTemplate.themeConfig?.sidebarTextColor || '#334155',
+    couleurTitrePrincipal: preset?.couleurTitrePrincipal || undefined,
+    couleurSousTitrePrincipal: preset?.couleurSousTitrePrincipal || undefined,
+    police: preset?.police || targetTemplate.defaultFont || cv.police,
     nombreColonnes: targetCols,
     positionSidebar: targetSidePosition,
-    couleurFondSidebar: targetTemplate.themeConfig?.sidebarBackgroundColor || cv.couleurFondSidebar,
-    couleurFond: targetTemplate.themeConfig?.backgroundColor || cv.couleurFond,
-    styleEnTete: targetTemplate.themeConfig?.headerStyle || cv.styleEnTete,
-    styleEnTeteSection: targetTemplate.themeConfig?.sectionHeaderStyle || cv.styleEnTeteSection,
-    styleCompetences: targetTemplate.themeConfig?.skillsDisplayMode || cv.styleCompetences,
-    photoForme: targetTemplate.themeConfig?.photoFrameStyle || cv.photoForme,
-    alignementDatesExperience: targetTemplate.themeConfig?.experienceDatesAlignment || cv.alignementDatesExperience,
+    largeurColonneGauche: preset?.largeurColonneGauche ?? cv.largeurColonneGauche ?? 32,
+    styleEnTete: (preset?.styleEnTete || targetTemplate.themeConfig?.headerStyle || 'banner') as any,
+    styleEnTeteSection: (preset?.styleEnTeteSection || targetTemplate.themeConfig?.sectionHeaderStyle || 'underline') as any,
+    styleCompetences: (preset?.styleCompetences || targetTemplate.themeConfig?.skillsDisplayMode || 'badges') as any,
+    photoForme: (preset?.photoForme || targetTemplate.themeConfig?.photoFrameStyle || 'ronde') as any,
+    formePhoto: (preset?.photoForme || targetTemplate.themeConfig?.photoFrameStyle || 'ronde') as any,
+    photoPosition: preset?.photoPosition || (preset?.styleEnTete === 'sidebar-top' ? 'in-sidebar' : 'in-header'),
+    formeSidebarDecor: (preset?.formeSidebarDecor || targetTemplate.themeConfig?.formeSidebarDecor || 'straight') as any,
+    timelineStyle: (preset?.timelineStyle || targetTemplate.themeConfig?.timelineStyle || 'none') as any,
+    cadrePhotoRing: (preset?.cadrePhotoRing || targetTemplate.themeConfig?.cadrePhotoRing || 'none') as any,
+    styleBadgesCoordonnees: preset?.styleBadgesCoordonnees || 'none',
+    decorativeLayers: preset?.decorativeLayers || targetTemplate.themeConfig?.decorativeLayers || [],
+    backgroundPattern: targetTemplate.themeConfig?.backgroundPattern || preset?.arrierePlanPattern || 'none',
+    arrierePlanPattern: preset?.arrierePlanPattern || targetTemplate.themeConfig?.backgroundPattern || 'none',
+    alignementDatesExperience: (preset?.alignementDatesExperience || targetTemplate.themeConfig?.experienceDatesAlignment || 'left') as any,
     sections: updatedSections,
     updatedAt: new Date().toISOString(),
   };

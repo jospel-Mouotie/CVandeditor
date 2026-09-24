@@ -56,6 +56,9 @@ export const HeaderProfileModal: React.FC<HeaderProfileModalProps> = ({
   const [couleurTexteProfil, setCouleurTexteProfil] = useState<string>(
     cv.couleurTexteProfil || profilStyle?.couleurTexte || '#FFFFFF'
   );
+  const [couleurSousTitrePrincipal, setCouleurSousTitrePrincipal] = useState<string>(
+    cv.couleurSousTitrePrincipal || ''
+  );
 
   const [afficherPhoto, setAfficherPhoto] = useState(cv.afficherPhoto !== false && Boolean(cv.photoUrl));
   const [photoUrl, setPhotoUrl] = useState(cv.photoUrl || '');
@@ -142,6 +145,7 @@ export const HeaderProfileModal: React.FC<HeaderProfileModalProps> = ({
       siteWeb,
       couleurFondProfil: couleurFondProfil || undefined,
       couleurTexteProfil: couleurTexteProfil || undefined,
+      couleurSousTitrePrincipal: couleurSousTitrePrincipal || undefined,
       afficherPhoto,
       photoUrl,
       photoForme,
@@ -297,7 +301,7 @@ export const HeaderProfileModal: React.FC<HeaderProfileModalProps> = ({
               </div>
 
               <div>
-                <label className="block font-bold mb-1">Couleur du texte du Profil</label>
+                <label className="block font-bold mb-1">Couleur du texte du Profil (Nom / Titres)</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -312,6 +316,35 @@ export const HeaderProfileModal: React.FC<HeaderProfileModalProps> = ({
                     placeholder="#FFFFFF"
                     className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold mb-1">Couleur du Sous-titre / Intitulé de poste</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={couleurSousTitrePrincipal || cv.couleurAccent || '#2563EB'}
+                    onChange={(e) => setCouleurSousTitrePrincipal(e.target.value)}
+                    className="w-9 h-9 rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer p-0.5 bg-white dark:bg-slate-900"
+                  />
+                  <input
+                    type="text"
+                    value={couleurSousTitrePrincipal}
+                    onChange={(e) => setCouleurSousTitrePrincipal(e.target.value)}
+                    placeholder="Automatique (Contraste intelligent)"
+                    className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
+                  />
+                  {couleurSousTitrePrincipal && (
+                    <button
+                      type="button"
+                      onClick={() => setCouleurSousTitrePrincipal('')}
+                      className="px-2 py-1 text-[10px] font-bold text-slate-500 hover:text-red-500 border border-slate-200 dark:border-slate-700 rounded-md cursor-pointer"
+                      title="Réinitialiser en mode automatique"
+                    >
+                      Auto
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

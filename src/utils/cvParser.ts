@@ -11,57 +11,61 @@ export function parseCVTextToSections(rawText: string, langue: 'fr' | 'en' = 'fr
   let resume = '';
 
   // 1. Extract contact details via Regex
-  const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const emailMatch = rawText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
   if (emailMatch) email = emailMatch[0];
 
   const phoneMatch = rawText.match(/(\+?\d{1,4}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{2,4}[\s.-]?\d{2,4}/);
   if (phoneMatch && phoneMatch[0].length >= 8) telephone = phoneMatch[0];
 
-  // First non-contact lines are likely Name & Job Title
-  if (lines.length > 0 && !lines[0].includes('@')) {
-    nomComplet = lines[0];
+  // Try to find full name and job title from top lines
+  const nonContactTopLines = lines.slice(0, 5).filter(l => !l.includes('@') && !l.match(/^\+?\d[\d\s.-]{7,}/));
+  if (nonContactTopLines.length > 0) {
+    nomComplet = nonContactTopLines[0].replace(/^[\s•*-]+/, '');
   }
-  if (lines.length > 1 && !lines[1].includes('@') && lines[1].length < 60) {
-    titreProfessionnel = lines[1];
+  if (nonContactTopLines.length > 1 && nonContactTopLines[1].length < 80) {
+    titreProfessionnel = nonContactTopLines[1].replace(/^[\s•*-]+/, '');
   }
 
-  // Group text lines into sections based on keywords
+  // Broad section headers matching regexes
   const sectionKeywords = {
-    experience: /expér|experienc|parcours|travail|emploi|work|career/i,
-    formation: /format|éducat|educat|diplôm|diplom|étude|etude|university|school/i,
-    competences: /compét|competenc|savoir|technolog|skill|tools|maîtrise/i,
-    langues: /langue|language|linguistic/i,
-    profil: /profil|résumé|summary|about|à propos|presentation|présentation/i
+    experience: /^(expér|experienc|parcours|travail|emploi|work|career|historique|activit|poste)/i,
+    formation: /^(format|éducat|educat|diplôm|diplom|étude|etude|university|school|scolarit|académ)/i,
+    competences: /^(compét|competenc|savoir|technolog|skill|tools|maîtrise|aptitude|atout|outils)/i,
+    langues: /^(langue|language|linguistic)/i,
+    profil: /^(profil|résumé|summary|about|à propos|presentation|présentation|objectif|intro)/i
   };
 
   const experienceList: ExperienceItem[] = [];
   const formationList: FormationItem[] = [];
   const competencesList: CompetenceItem[] = [];
   const languesList: LangueItem[] = [];
-  let rawUnsortedText = '';
 
   let currentCategory: 'none' | 'profil' | 'experience' | 'formation' | 'competences' | 'langues' = 'none';
+  let currentExpItem: ExperienceItem | null = null;
+  let currentEduItem: FormationItem | null = null;
 
-  // Process lines according to active category or infer smartly
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line || line.length === 0) continue;
 
     // Check header keywords
-    if (sectionKeywords.profil.test(line)) {
-      currentCategory = 'profil';
-      continue;
-    } else if (sectionKeywords.experience.test(line)) {
-      currentCategory = 'experience';
-      continue;
-    } else if (sectionKeywords.formation.test(line)) {
-      currentCategory = 'formation';
-      continue;
-    } else if (sectionKeywords.competences.test(line)) {
-      currentCategory = 'competences';
-      continue;
-    } else if (sectionKeywords.langues.test(line)) {
-      currentCategory = 'langues';
+    const isHeaderLine = line.length < 50 && (
+      sectionKeywords.profil.test(line) ||
+      sectionKeywords.experience.test(line) ||
+      sectionKeywords.formation.test(line) ||
+      sectionKeywords.competences.test(line) ||
+      sectionKeywords.langues.test(line)
+    );
+
+    if (isHeaderLine) {
+      if (currentExpItem) { experienceList.push(currentExpItem); currentExpItem = null; }
+      if (currentEduItem) { formationList.push(currentEduItem); currentEduItem = null; }
+
+      if (sectionKeywords.profil.test(line)) currentCategory = 'profil';
+      else if (sectionKeywords.experience.test(line)) currentCategory = 'experience';
+      else if (sectionKeywords.formation.test(line)) currentCategory = 'formation';
+      else if (sectionKeywords.competences.test(line)) currentCategory = 'competences';
+      else if (sectionKeywords.langues.test(line)) currentCategory = 'langues';
       continue;
     }
 
@@ -69,30 +73,46 @@ export function parseCVTextToSections(rawText: string, langue: 'fr' | 'en' = 'fr
     if (currentCategory === 'profil') {
       resume += (resume ? '\n' : '') + line;
     } else if (currentCategory === 'experience') {
-      const parts = line.split(/[-|–:]/);
-      experienceList.push({
-        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        poste: parts[0]?.trim() || line,
-        entreprise: parts[1]?.trim() || 'Entreprise',
-        ville: parts[2]?.trim() || '',
-        dateDebut: '',
-        dateFin: '',
-        actuel: false,
-        description: line
-      });
+      const isBullet = line.match(/^[\s•*-]+/);
+      const containsDate = line.match(/\b(19\d\d|20\d\d|présent|present|actuel)\b/i);
+
+      if (!currentExpItem || (containsDate && !isBullet)) {
+        if (currentExpItem) experienceList.push(currentExpItem);
+        const parts = line.split(/[-|–:]/);
+        currentExpItem = {
+          id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          poste: parts[0]?.trim().replace(/^[\s•*-]+/, '') || line,
+          entreprise: parts[1]?.trim() || 'Entreprise',
+          ville: parts[2]?.trim() || '',
+          dateDebut: '',
+          dateFin: '',
+          actuel: false,
+          description: ''
+        };
+      } else {
+        currentExpItem.description += (currentExpItem.description ? '\n' : '') + line;
+      }
     } else if (currentCategory === 'formation') {
-      const parts = line.split(/[-|–:]/);
-      formationList.push({
-        id: `edu-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        diplome: parts[0]?.trim() || line,
-        etablissement: parts[1]?.trim() || 'Université / École',
-        ville: parts[2]?.trim() || '',
-        dateDebut: '',
-        dateFin: '',
-        description: line
-      });
+      const isBullet = line.match(/^[\s•*-]+/);
+      const containsDate = line.match(/\b(19\d\d|20\d\d|présent|present)\b/i);
+
+      if (!currentEduItem || (containsDate && !isBullet)) {
+        if (currentEduItem) formationList.push(currentEduItem);
+        const parts = line.split(/[-|–:]/);
+        currentEduItem = {
+          id: `edu-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          diplome: parts[0]?.trim().replace(/^[\s•*-]+/, '') || line,
+          etablissement: parts[1]?.trim() || 'Université / École',
+          ville: parts[2]?.trim() || '',
+          dateDebut: '',
+          dateFin: '',
+          description: ''
+        };
+      } else {
+        currentEduItem.description += (currentEduItem.description ? '\n' : '') + line;
+      }
     } else if (currentCategory === 'competences') {
-      const skills = line.split(/[,;•|\t]/).map(s => s.trim()).filter(s => s.length > 0);
+      const skills = line.split(/[,;•|\t]/).map(s => s.trim().replace(/^[\s•*-]+/, '')).filter(s => s.length > 0 && s.length < 50);
       skills.forEach(skill => {
         competencesList.push({
           id: `sk-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -104,16 +124,18 @@ export function parseCVTextToSections(rawText: string, langue: 'fr' | 'en' = 'fr
       const parts = line.split(/[-:]/);
       languesList.push({
         id: `lang-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        langue: parts[0]?.trim() || line,
+        langue: parts[0]?.trim().replace(/^[\s•*-]+/, '') || line,
         niveau: parts[1]?.trim() || 'Maternelle / Courant'
       });
     } else {
-      // If no category selected yet, append to resume summary
-      if (i > 1) {
+      if (i > 1 && line !== nomComplet && line !== titreProfessionnel) {
         resume += (resume ? '\n' : '') + line;
       }
     }
   }
+
+  if (currentExpItem) experienceList.push(currentExpItem);
+  if (currentEduItem) formationList.push(currentEduItem);
 
   const sections: Section[] = [
     {
@@ -166,20 +188,6 @@ export function parseCVTextToSections(rawText: string, langue: 'fr' | 'en' = 'fr
       contenu: languesList
     }
   ];
-
-  if (rawUnsortedText.trim().length > 0) {
-    sections.push({
-      id: 'sec-raw-unsorted',
-      type: 'personnalisee',
-      titre: langue === 'en' ? 'Raw Import to Sort' : 'Import brut à trier',
-      ordre: 6,
-      visible: true,
-      contenu: {
-        typeLayout: 'texte_libre',
-        texteLibre: rawUnsortedText
-      }
-    });
-  }
 
   return sections;
 }

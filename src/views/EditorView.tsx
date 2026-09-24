@@ -14,11 +14,12 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 
-import { CV, Section, Language, User, ExperienceItem, FormationItem, CompetenceItem, LangueItem, PersonnaliseeContenu } from '../types';
+import { CV, Section, Language, User, ExperienceItem, FormationItem, CompetenceItem, LangueItem, PersonnaliseeContenu, SubscriptionTier } from '../types';
 import { CV_TEMPLATES } from '../data/templates';
 import { getTranslation, getLocalizedTemplateName } from '../i18n/translations';
 import { SortableSectionItem } from '../components/SortableSectionItem';
 import { SpellCheckField } from '../components/SpellCheckField';
+import { ClearableInput, ClearableTextarea } from '../components/ClearableInput';
 import { PhotoCropper } from '../components/PhotoCropper';
 import { CVPreview } from '../components/CVPreview';
 import { CreatorStudioPanel } from '../components/CreatorStudioPanel';
@@ -26,7 +27,11 @@ import { FormWizard } from '../components/FormWizard';
 import { VisualCVEditor } from '../editor/VisualCVEditor';
 import { CareerToolsModal } from '../components/CareerToolsModal';
 import { toggleColumnLayout } from '../state/cvActions';
-import { exportCVToPDF, exportCVToImage } from '../utils/pdfExport';
+import { exportCVToPDF, exportCVToImage, exportCVToWord, exportCVToJSON, exportCVToPlainText } from '../utils/pdfExport';
+import { detectPaidFeaturesInCV, PaidFeatureUsage } from '../utils/paidUsageDetector';
+import { PaidUsageExportModal } from '../components/PaidUsageExportModal';
+import { isSubOptionPaidByAdmin, isStudioMenuPaidByAdmin, isPaymentActive } from '../utils/adminPaidMatrix';
+import { saveActiveCVDraft, getLastSavedTime, formatSavedTimeAgo } from '../utils/cvDraftStorage';
 
 import {
   ArrowLeft,
@@ -50,7 +55,17 @@ import {
   Loader2,
   Layers,
   Target,
-  Linkedin
+  Linkedin,
+  Laptop,
+  Lock,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  FileCode,
+  FileSpreadsheet,
+  Briefcase,
+  CheckCircle2,
+  ShieldCheck
 } from 'lucide-react';
 
 interface EditorViewProps {
@@ -76,10 +91,66 @@ export const EditorView: React.FC<EditorViewProps> = ({
 }) => {
   const t = (key: Parameters<typeof getTranslation>[1]) => getTranslation(langue, key);
 
-  const [cv, setCv] = useState<CV>(() => ({
+  const [cv, setCvState] = useState<CV>(() => ({
     ...initialCV,
     sections: initialCV?.sections || []
   }));
+
+  const [undoStack, setUndoStack] = useState<CV[]>([]);
+  const [redoStack, setRedoStack] = useState<CV[]>([]);
+
+  const [lastSavedIso, setLastSavedIso] = useState<string | null>(() => getLastSavedTime(initialCV?.id));
+
+  // Wrapper setCv that records undo history and immediately saves local draft
+  const setCv = (action: CV | ((prev: CV) => CV)) => {
+    setCvState(prev => {
+      const next = typeof action === 'function' ? action(prev) : action;
+      if (JSON.stringify(prev) !== JSON.stringify(next)) {
+        setUndoStack(u => [...u.slice(-30), prev]);
+        setRedoStack([]);
+        // Immediate synchronous save to local storage
+        saveActiveCVDraft(next);
+        setLastSavedIso(new Date().toISOString());
+      }
+      return next;
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack(u => u.slice(0, u.length - 1));
+    setRedoStack(r => [cv, ...r]);
+    setCvState(previous);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[0];
+    setRedoStack(r => r.slice(1));
+    setUndoStack(u => [...u, cv]);
+    setCvState(next);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName);
+      if (isInput) return;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undoStack, redoStack, cv]);
   const [editorMode, setEditorMode] = useState<'visual' | 'form'>(initialMode || 'form');
   const [activeTab, setActiveTab] = useState<'wizard' | 'sections' | 'style' | 'visual' | 'preview'>(
     initialMode === 'visual' ? 'visual' : 'wizard'
@@ -101,7 +172,30 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const [expandedSectionIds, setExpandedSectionIds] = useState<Record<string, boolean>>({});
   const [columnFilter, setColumnFilter] = useState<'toutes' | 'gauche' | 'droite'>('toutes');
   const [showMobilePreviewModal, setShowMobilePreviewModal] = useState<boolean>(false);
-  const [mobileZoom, setMobileZoom] = useState<number>(0.65);
+  
+  const getFitZoom = () => {
+    if (typeof window === 'undefined') return 0.5;
+    return Math.min(1.0, window.innerWidth / 794);
+  };
+  const [mobileZoom, setMobileZoom] = useState<number>(getFitZoom);
+  const [windowWidth, setWindowWidth] = useState<number>(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+
+  useEffect(() => {
+    if (showMobilePreviewModal) {
+      setMobileZoom(getFitZoom());
+    }
+  }, [showMobilePreviewModal]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      if (showMobilePreviewModal) {
+        setMobileZoom(getFitZoom());
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [showMobilePreviewModal]);
 
   // Collapse or Expand All Sections
   const collapseAllSections = () => {
@@ -137,6 +231,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
   const [exportNotice, setExportNotice] = useState<{ type: 'loading' | 'success' | 'error'; message: string } | null>(null);
   const [showCareerModal, setShowCareerModal] = useState(false);
   const [careerModalTab, setCareerModalTab] = useState<'lettre' | 'linkedin' | 'offre'>('lettre');
+  const [showPaidExportModal, setShowPaidExportModal] = useState(false);
+  const [detectedPaidUsages, setDetectedPaidUsages] = useState<PaidFeatureUsage[]>([]);
 
   // DnD Sensors
   const sensors = useSensors(
@@ -149,15 +245,44 @@ export const EditorView: React.FC<EditorViewProps> = ({
     setCv(initialCV);
   }, [initialCV.id]);
 
-  // Auto-save debounce effect
+  // Auto-save debounce effect & lifecycle exit listeners (beforeunload, visibilitychange)
   useEffect(() => {
+    // Ensure draft is stored immediately
+    saveActiveCVDraft(cv);
+
     const timer = setTimeout(async () => {
       setAutoSaveStatus('saving');
-      await onSaveCV(cv);
-      setAutoSaveStatus('saved');
-    }, 1500);
+      try {
+        await onSaveCV(cv);
+        setLastSavedIso(new Date().toISOString());
+      } catch (err) {
+        console.warn('Auto-save error:', err);
+      } finally {
+        setAutoSaveStatus('saved');
+      }
+    }, 800);
 
-    return () => clearTimeout(timer);
+    const handleBeforeUnload = () => {
+      saveActiveCVDraft(cv);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveActiveCVDraft(cv);
+        onSaveCV(cv);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Flush on unmount
+      saveActiveCVDraft(cv);
+    };
   }, [cv]);
 
   // Handle DnD Drag End
@@ -280,10 +405,51 @@ export const EditorView: React.FC<EditorViewProps> = ({
     }
   };
 
+  // Reset Paid Features to Free Defaults
+  const handleResetToFreeDefaults = () => {
+    setCv(prev => ({
+      ...prev,
+      templateId: 'm51',
+      police: 'Inter',
+      arrierePlanPattern: 'none',
+      calqueDecoratif: 'none',
+      couleurFondSidebar: undefined
+    }));
+    setExportNotice({ type: 'success', message: 'Style réinitialisé en version gratuite. Lancement du téléchargement...' });
+    setTimeout(() => {
+      exportCVToPDF('cv-preview-container', `${cv.titreCV || 'CV'}.pdf`, cv.pageCibleMode === '2_pages');
+    }, 500);
+  };
+
+  // Strict Authentication Guard for All Export Formats
+  const requireAuthForExport = (): boolean => {
+    if (!user) {
+      setExportNotice({
+        type: 'error',
+        message: 'Authentification obligatoire : Veuillez vous connecter ou créer un compte gratuit pour exporter votre CV (PDF, Image, Word, etc.).'
+      });
+      onOpenAuth();
+      return false;
+    }
+    return true;
+  };
+
+  const effectiveUserTier: SubscriptionTier = (user?.role === 'ADMIN' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'decouverte' || user?.subscriptionTier === 'classique') ? (user?.role === 'ADMIN' ? 'premium' : (user?.subscriptionTier as SubscriptionTier)) : 'freemium';
+
   // PDF Export Action
   const handleExportPDF = async () => {
-    setExportNotice({ type: 'loading', message: 'Génération du PDF HD en cours...' });
     setShowExportMenu(false);
+    if (!requireAuthForExport()) return;
+
+    const paidUsages = detectPaidFeaturesInCV(cv, effectiveUserTier);
+
+    if (paidUsages.length > 0) {
+      setDetectedPaidUsages(paidUsages);
+      setShowPaidExportModal(true);
+      return;
+    }
+
+    setExportNotice({ type: 'loading', message: 'Génération du PDF HD en cours...' });
 
     const result = await exportCVToPDF('cv-preview-container', `${cv.titreCV || 'CV'}.pdf`, cv.pageCibleMode === '2_pages');
 
@@ -295,10 +461,20 @@ export const EditorView: React.FC<EditorViewProps> = ({
     }
   };
 
-  // Image Export Action
+  // Image PNG Export Action
   const handleExportImage = async () => {
-    setExportNotice({ type: 'loading', message: "Génération de l'image haute définition..." });
     setShowExportMenu(false);
+    if (!requireAuthForExport()) return;
+
+    const paidUsages = detectPaidFeaturesInCV(cv, effectiveUserTier);
+
+    if (paidUsages.length > 0) {
+      setDetectedPaidUsages(paidUsages);
+      setShowPaidExportModal(true);
+      return;
+    }
+
+    setExportNotice({ type: 'loading', message: "Génération de l'image haute définition..." });
 
     const result = await exportCVToImage('cv-preview-container', `${cv.titreCV || 'CV'}.png`);
 
@@ -309,6 +485,77 @@ export const EditorView: React.FC<EditorViewProps> = ({
       setExportNotice({ type: 'error', message: `Échec de l'export image : ${result.message || 'Erreur inconnue'}` });
     }
   };
+
+  // Multi-format: Word Export Action (Premium)
+  const handleExportWord = async () => {
+    setShowExportMenu(false);
+    if (!requireAuthForExport()) return;
+
+    if (effectiveUserTier === 'freemium') {
+      setExportNotice({ type: 'error', message: "L'export Word (.doc) est une fonctionnalité du Forfait Premium." });
+      onOpenPayment(cv);
+      return;
+    }
+
+    setExportNotice({ type: 'loading', message: 'Génération du document Word...' });
+    const result = await exportCVToWord(cv, `${cv.titreCV || 'CV'}`);
+    if (result.success) {
+      setExportNotice({ type: 'success', message: 'Document Word (.doc) exporté avec succès !' });
+      setTimeout(() => setExportNotice(null), 4000);
+    } else {
+      setExportNotice({ type: 'error', message: result.message || "Échec de l'export Word" });
+    }
+  };
+
+  // Multi-format: JSON Export Action (Premium)
+  const handleExportJSON = async () => {
+    setShowExportMenu(false);
+    if (!requireAuthForExport()) return;
+
+    if (effectiveUserTier === 'freemium') {
+      setExportNotice({ type: 'error', message: "L'export JSON structuré est une fonctionnalité du Forfait Premium." });
+      onOpenPayment(cv);
+      return;
+    }
+
+    setExportNotice({ type: 'loading', message: 'Génération du fichier JSON...' });
+    const result = await exportCVToJSON(cv, `${cv.titreCV || 'CV'}`);
+    if (result.success) {
+      setExportNotice({ type: 'success', message: 'Fichier JSON exporté avec succès !' });
+      setTimeout(() => setExportNotice(null), 4000);
+    } else {
+      setExportNotice({ type: 'error', message: result.message || "Échec de l'export JSON" });
+    }
+  };
+
+  // Multi-format: Plain Text Export Action (Premium)
+  const handleExportPlainText = async () => {
+    setShowExportMenu(false);
+    if (!requireAuthForExport()) return;
+
+    if (effectiveUserTier === 'freemium') {
+      setExportNotice({ type: 'error', message: "L'export Texte Brut (.txt) est une fonctionnalité du Forfait Premium." });
+      onOpenPayment(cv);
+      return;
+    }
+
+    setExportNotice({ type: 'loading', message: 'Génération du fichier texte...' });
+    const result = await exportCVToPlainText(cv, `${cv.titreCV || 'CV'}`);
+    if (result.success) {
+      setExportNotice({ type: 'success', message: 'Fichier Texte (.txt) exporté avec succès !' });
+      setTimeout(() => setExportNotice(null), 4000);
+    } else {
+      setExportNotice({ type: 'error', message: result.message || "Échec de l'export texte" });
+    }
+  };
+
+  // On mobile/small screen (< 1024px), force form wizard mode (visual Word mode hidden)
+  useEffect(() => {
+    if (windowWidth < 1024 && (editorMode === 'visual' || activeTab === 'visual')) {
+      setEditorMode('form');
+      setActiveTab('wizard');
+    }
+  }, [windowWidth, editorMode, activeTab]);
 
   const templateObj = CV_TEMPLATES.find(t => t.id === cv.templateId) || CV_TEMPLATES[0];
 
@@ -334,211 +581,166 @@ export const EditorView: React.FC<EditorViewProps> = ({
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 pb-28 md:pb-12 text-slate-800 dark:text-slate-100 font-sans">
       
-      {/* TOP NAVIGATION HEADER - HORIZONTAL BAR */}
-      <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-2xs">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      {/* TOP NAVIGATION HEADER - ULTRA COMPACT SINGLE ROW */}
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-3 py-1.5 shadow-2xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           
-          {/* Back & Document Title */}
-          <div className="flex items-center space-x-3 shrink-0">
+          {/* Left: Back & Document Title */}
+          <div className="flex items-center space-x-2 shrink-0">
             <button
               type="button"
               onClick={onBack}
-              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer border border-slate-300 dark:border-slate-700 shrink-0"
+              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-extrabold text-xs flex items-center gap-1 transition-all shadow-xs cursor-pointer border border-slate-300 dark:border-slate-700 shrink-0"
               title={getTranslation(langue, 'backToResumes')}
             >
-              <ArrowLeft className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[2.5]" />
+              <ArrowLeft className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 stroke-[2.5]" />
               <span className="hidden sm:inline">{getTranslation(langue, 'backToResumes')}</span>
             </button>
-            <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
               <input
                 type="text"
                 value={cv.titreCV}
                 onChange={(e) => setCv(prev => ({ ...prev, titreCV: e.target.value }))}
-                className="font-black text-xs sm:text-sm bg-transparent border-0 border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-600 outline-none px-1 py-0.5 text-slate-900 dark:text-white max-w-[160px] sm:max-w-[220px]"
+                className="font-black text-xs sm:text-sm bg-transparent border-0 border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-600 outline-none px-1 py-0.5 text-slate-900 dark:text-white max-w-[130px] sm:max-w-[200px] truncate"
                 placeholder={getTranslation(langue, 'docTitleLabel')}
               />
-              <span className={`text-[9px] font-bold px-1 ${autoSaveStatus === 'saving' ? 'text-amber-500 animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {autoSaveStatus === 'saving' ? getTranslation(langue, 'autoSaveSaving') : getTranslation(langue, 'autoSaveSaved')}
+              <div
+                title={langue === 'en' ? 'Changes saved automatically in real-time' : 'Modifications enregistrées automatiquement en temps réel'}
+                className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 border border-emerald-500/25 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 select-none shrink-0"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${autoSaveStatus === 'saving' ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`} />
+                <span>
+                  {autoSaveStatus === 'saving'
+                    ? (langue === 'en' ? 'Saving...' : langue === 'ar' ? 'جاري الحفظ...' : 'Sauvegarde...')
+                    : (langue === 'en' ? 'Auto-saved' : langue === 'ar' ? 'حفظ تلقائي' : 'Enregistré')}
+                </span>
+              </div>
+              <span className={`sm:hidden text-[10px] font-bold shrink-0 ${autoSaveStatus === 'saving' ? 'text-amber-500 animate-pulse' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {autoSaveStatus === 'saving' ? '...' : '✓'}
               </span>
+
+              {/* Undo / Redo (Retour en arrière) Controls */}
+              <div className="flex items-center gap-1 border-l border-neutral-200 dark:border-neutral-800 pl-2">
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  disabled={undoStack.length === 0}
+                  className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs flex items-center gap-1 font-black cursor-pointer shadow-xs"
+                  title="Annuler / Retour en arrière (Ctrl+Z)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline">Annuler</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRedo}
+                  disabled={redoStack.length === 0}
+                  className="px-2 py-1 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-xs flex items-center gap-1 font-black cursor-pointer shadow-xs"
+                  title="Rétablir (Ctrl+Y)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 scale-x-[-1]" />
+                  <span className="hidden lg:inline">Rétablir</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Center: Horizontal Navigation Tabs & Quick Column Switch */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700/80 gap-1 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => { setEditorMode('form'); setActiveTab('wizard'); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'wizard' && editorMode === 'form'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Assistant</span>
-              </button>
+          {/* Center (Desktop only): Navigation Tabs */}
+          <div className="hidden md:flex items-center bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-lg border border-neutral-200 dark:border-neutral-700 gap-0.5 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => { setEditorMode('form'); setActiveTab('wizard'); }}
+              className={`px-2.5 py-1 rounded-md text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'wizard' && editorMode === 'form'
+                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-2xs'
+                  : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Assistant</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => { setEditorMode('form'); setActiveTab('sections'); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'sections' && editorMode === 'form'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Sections</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => { setEditorMode('form'); setActiveTab('sections'); }}
+              className={`px-2.5 py-1 rounded-md text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'sections' && editorMode === 'form'
+                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-2xs'
+                  : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Sections</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => { setEditorMode('form'); setActiveTab('style'); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                  activeTab === 'style' && editorMode === 'form'
-                    ? 'bg-purple-600 text-white shadow-xs ring-2 ring-purple-400/40'
-                    : 'text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-950/40'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                <span>Style & Studio</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => { setEditorMode('form'); setActiveTab('style'); }}
+              className={`px-2.5 py-1 rounded-md text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
+                activeTab === 'style' && editorMode === 'form'
+                  ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-2xs'
+                  : 'text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Style & Studio</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => { setEditorMode('visual'); setActiveTab('visual'); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer ${
-                  editorMode === 'visual' || activeTab === 'visual'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <Palette className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Édition Visuelle</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCareerModalTab('lettre');
+                setShowCareerModal(true);
+              }}
+              className="px-2.5 py-1 rounded-md text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
+              title="Générer la lettre ou optimiser LinkedIn pour ce CV"
+            >
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Lettre & IA</span>
+            </button>
+          </div>
 
-            {/* Quick 1 Col / 2 Col Switch */}
-            <div className="hidden lg:flex items-center bg-slate-100 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700/80 gap-1 shadow-2xs">
+          {/* Right: Compact 1 Col / 2 Col Layout Switcher & Primary Desktop Export Button */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center bg-blue-50 dark:bg-blue-950/40 p-0.5 rounded-lg border border-blue-500/30 gap-0.5">
               <button
                 type="button"
-                onClick={() => setCv(toggleColumnLayout(cv, 1))}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                onClick={() => setCv(prev => ({ ...prev, nombreColonnes: 1 }))}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                   (cv.nombreColonnes || 2) === 1
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-neutral-700 dark:text-neutral-300 hover:bg-white/50 dark:hover:bg-neutral-800'
                 }`}
-                title="Passer en disposition 1 colonne"
+                title="1 colonne"
               >
                 <FileText className="w-3.5 h-3.5" />
                 <span>1 Col</span>
               </button>
               <button
                 type="button"
-                onClick={() => setCv(toggleColumnLayout(cv, 2))}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                onClick={() => setCv(prev => ({ ...prev, nombreColonnes: 2 }))}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ${
                   (cv.nombreColonnes || 2) === 2
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-neutral-700 dark:text-neutral-300 hover:bg-white/50 dark:hover:bg-neutral-800'
                 }`}
-                title="Passer en disposition 2 colonnes"
+                title="2 colonnes"
               >
                 <Columns className="w-3.5 h-3.5" />
                 <span>2 Col</span>
               </button>
             </div>
 
-            {/* AI Career Tools Trigger */}
-            <div className="flex items-center bg-gradient-to-r from-emerald-500/20 via-indigo-500/20 to-blue-500/20 dark:from-emerald-950/50 dark:to-blue-950/50 p-1 rounded-xl border-2 border-emerald-500/40 dark:border-emerald-600/40 gap-1.5 shadow-xs">
-              <button
-                type="button"
-                onClick={() => { setCareerModalTab('offre'); setShowCareerModal(true); }}
-                className="px-3 py-1.5 rounded-lg text-xs font-black flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xs transition-all cursor-pointer ring-1 ring-emerald-400/40"
-                title="Cibler une offre d'emploi (Photo ou Texte)"
-              >
-                <Target className="w-4 h-4 text-emerald-100" />
-                <span className="font-extrabold tracking-tight">Personnaliser pour Offre</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setCareerModalTab('lettre'); setShowCareerModal(true); }}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-indigo-600/10 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-600 hover:text-white transition-all cursor-pointer"
-                title="Générer une lettre de motivation"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline font-bold">Lettre de Motivation</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setCareerModalTab('linkedin'); setShowCareerModal(true); }}
-                className="px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-sky-600/10 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 hover:bg-sky-600 hover:text-white transition-all cursor-pointer"
-                title="Générer un profil LinkedIn"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span className="hidden md:inline font-bold">LinkedIn Pro</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Right: Download Button + Payment */}
-          <div className="flex items-center space-x-2 shrink-0">
-            {/* Download Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowExportMenu(!showExportMenu)}
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                style={{ minHeight: '36px' }}
-              >
-                <Download className="w-4 h-4" />
-                <span>{getTranslation(langue, 'actionDownloadPDF')}</span>
-              </button>
-
-              {/* Export Menu Dropdown */}
-              {showExportMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in slide-in-from-top-2">
-                  <button
-                    type="button"
-                    onClick={handleExportPDF}
-                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-xl text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2.5 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4 text-blue-600" />
-                    <div>
-                      <div>{getTranslation(langue, 'actionDownloadPDF')} (A4 HD)</div>
-                      <div className="text-[10px] text-slate-400 font-normal">Strict 1 Page Print Guarantee</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleExportImage}
-                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/60 rounded-xl text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2.5 cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-2"
-                  >
-                    <Download className="w-4 h-4 text-emerald-600" />
-                    <div>
-                      <div>Image (PNG HD)</div>
-                      <div className="text-[10px] text-slate-400 font-normal">High Resolution Image</div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Payment Button if not paid */}
-            {cv.statutPaiement !== 'PAYE' && (
-              <button
-                type="button"
-                onClick={() => onOpenPayment(cv)}
-                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
-                style={{ minHeight: '36px' }}
-              >
-                <CreditCard className="w-4 h-4" />
-                <span className="hidden md:inline">Valider (1,99 €)</span>
-              </button>
-            )}
+            {/* Desktop Export Button - Icon Only as requested */}
+            <button
+              type="button"
+              onClick={() => setShowExportMenu(prev => !prev)}
+              className="p-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black flex items-center justify-center transition-all shadow-md hover:shadow-lg cursor-pointer border border-emerald-500 shrink-0"
+              title="Télécharger / Exporter"
+              aria-label="Télécharger"
+            >
+              <Download className="w-4 h-4 stroke-[2.5]" />
+            </button>
           </div>
 
         </div>
@@ -589,16 +791,21 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 cv={cv}
                 onChangeCV={setCv}
                 template={templateObj}
+                langue={langue}
+                userTier={effectiveUserTier}
+                onOpenUpgradeModal={() => onOpenPayment(cv)}
               />
             )}
 
             {/* 2. ASSISTANT (FORM WIZARD) TAB */}
             {activeTab === 'wizard' && (
-              <div className="space-y-3">
+              <div className="w-full min-h-[650px] flex flex-col">
                 <FormWizard
                   cv={cv}
                   onChangeCV={setCv}
                   langue={langue}
+                  userTier={effectiveUserTier}
+                  onOpenUpgradeModal={() => onOpenPayment(cv)}
                   onFinishWizard={() => setActiveTab('style')}
                 />
               </div>
@@ -608,36 +815,50 @@ export const EditorView: React.FC<EditorViewProps> = ({
             {activeTab === 'sections' && (
               <div className="space-y-4">
                 {/* 1 / 2 COLUMNS LAYOUT SELECTOR CARD */}
-                <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+                <div className="p-4 bg-white dark:bg-black rounded-xl border border-black/10 dark:border-white/10 space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                      <Columns className="w-4 h-4 text-blue-600" />
+                    <label className="text-xs font-black uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+                      <Columns className="w-4 h-4 text-black dark:text-white" />
                       <span>Disposition & Colonnes (1 ou 2 Colonnes)</span>
+                      {isPaymentActive() && effectiveUserTier === 'freemium' && isSubOptionPaidByAdmin('template:column_layout', 'template') && (
+                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-600 text-white flex items-center gap-1 shrink-0">
+                          <Lock className="w-2.5 h-2.5" /> PRO
+                        </span>
+                      )}
                     </label>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
-                      Mise à jour en direct
-                    </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setCv(prev => toggleColumnLayout(prev, 1))}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      onClick={() => {
+                        if (isPaymentActive() && effectiveUserTier === 'freemium' && isSubOptionPaidByAdmin('template:column_layout', 'template')) {
+                          onOpenPayment(cv);
+                          return;
+                        }
+                        setCv(prev => toggleColumnLayout(prev, 1));
+                      }}
+                      className={`py-2 px-3 text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                         (cv.nombreColonnes || 2) === 1
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                          : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-black/30 dark:hover:border-white/30'
                       }`}
                     >
                       <span>1 Colonne Simple</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setCv(prev => toggleColumnLayout(prev, 2))}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      onClick={() => {
+                        if (isPaymentActive() && effectiveUserTier === 'freemium' && isSubOptionPaidByAdmin('template:column_layout', 'template')) {
+                          onOpenPayment(cv);
+                          return;
+                        }
+                        setCv(prev => toggleColumnLayout(prev, 2));
+                      }}
+                      className={`py-2 px-3 text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                         (cv.nombreColonnes || 2) === 2
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                          : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-black/30 dark:hover:border-white/30'
                       }`}
                     >
                       <span>2 Colonnes</span>
@@ -646,15 +867,15 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                   {/* 2-Columns Settings */}
                   {(cv.nombreColonnes || 2) === 2 && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3 animate-fadeIn">
+                    <div className="pt-3 border-t border-black/10 dark:border-white/10 space-y-3 animate-fadeIn">
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => setCv(prev => ({ ...prev, positionSidebar: 'gauche' }))}
                           className={`py-1.5 px-2.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                             (cv.positionSidebar || 'gauche') === 'gauche'
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                              ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                              : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                           }`}
                         >
                           Sidebar à Gauche
@@ -664,8 +885,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           onClick={() => setCv(prev => ({ ...prev, positionSidebar: 'droite' }))}
                           className={`py-1.5 px-2.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer ${
                             (cv.positionSidebar || 'gauche') === 'droite'
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                              ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                              : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800'
                           }`}
                         >
                           Sidebar à Droite
@@ -673,9 +894,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       </div>
 
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                        <div className="flex justify-between text-[11px] font-bold text-neutral-600 dark:text-neutral-400">
                           <span>Largeur de la Sidebar :</span>
-                          <span className="text-blue-600 dark:text-blue-400">{cv.largeurColonneGauche || 34}%</span>
+                          <span className="text-black dark:text-white font-mono">{cv.largeurColonneGauche || 34}%</span>
                         </div>
                         <input
                           type="range"
@@ -683,22 +904,65 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           max="50"
                           value={cv.largeurColonneGauche || 34}
                           onChange={(e) => setCv(prev => ({ ...prev, largeurColonneGauche: parseInt(e.target.value) }))}
-                          className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                          className="w-full accent-black dark:accent-white cursor-pointer h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* DYNAMIC PHOTO CUSTOMIZATION SECTION */}
-                <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
+                {/* 1 / 2 PAGES A4 SELECTOR CARD */}
+                <div className="p-4 bg-white dark:bg-black rounded-xl border border-black/10 dark:border-white/10 space-y-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                      <CameraIcon className="w-4 h-4 text-blue-600" />
+                    <label className="text-xs font-black uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-black dark:text-white" />
+                      <span>Format d'Exportation & Pages (1 ou 2 Pages A4)</span>
+                    </label>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-black/10 dark:border-white/10 text-neutral-600 dark:text-neutral-400">
+                      {cv.pageCibleMode === '2_pages' ? '2 Pages' : '1 Page A4'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCv(prev => ({ ...prev, pageCibleMode: '1_page' }))}
+                      className={`py-2 px-3 text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        cv.pageCibleMode !== '2_pages'
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                          : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-black/30 dark:hover:border-white/30'
+                      }`}
+                    >
+                      <span>1 Page A4 (Standard)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCv(prev => ({ ...prev, pageCibleMode: '2_pages' }))}
+                      className={`py-2 px-3 text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                        cv.pageCibleMode === '2_pages'
+                          ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                          : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800 hover:border-black/30 dark:hover:border-white/30'
+                      }`}
+                    >
+                      <span>2 Pages A4</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">
+                    {cv.pageCibleMode === '2_pages'
+                      ? 'Votre CV sera structuré et exporté sur 2 pages distinctes complètes.'
+                      : 'Votre CV est calibré pour tenir parfaitement sur une seule page A4 sans déborder.'}
+                  </p>
+                </div>
+
+                {/* DYNAMIC PHOTO CUSTOMIZATION SECTION */}
+                <div className="p-4 bg-white dark:bg-black rounded-xl border border-black/10 dark:border-white/10 shadow-2xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+                      <CameraIcon className="w-4 h-4 text-black dark:text-white" />
                       <span>Photo de Profil Personnalisée</span>
                     </label>
                     {cv.photoUrl && (
-                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                      <span className="text-[10px] font-bold text-black dark:text-white bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 rounded border border-black/10 dark:border-white/10">
                         Totalement Dynamique
                       </span>
                     )}
@@ -710,7 +974,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                         <img
                           src={cv.photoUrl}
                           alt="Profil"
-                          className="object-cover border-2 border-blue-600 shadow-md transition-all"
+                          className="object-cover border-2 border-black dark:border-white shadow-md transition-all"
                           style={{
                             width: `${cv.photoTaille || 72}px`,
                             height: `${cv.photoTaille || 72}px`,
@@ -731,13 +995,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
+                      <div className="w-16 h-16 rounded-xl bg-neutral-100 dark:bg-neutral-900 border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center text-neutral-400 shrink-0">
                         <CameraIcon className="w-6 h-6" />
                       </div>
                     )}
 
                     <div className="flex-1 space-y-2">
-                      <label className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-blue-500/20 transition-all">
+                      <label className="inline-block px-4 py-2 bg-black hover:opacity-90 dark:bg-white dark:hover:opacity-90 text-white dark:text-black font-bold text-xs rounded-xl cursor-pointer shadow-xs transition-all">
                         <span>{cv.photoUrl ? 'Changer la photo' : 'Importer une photo'}</span>
                         <input
                           type="file"
@@ -746,7 +1010,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           className="hidden"
                         />
                       </label>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
                         Position, taille, forme et bordures 100% configurables en temps réel.
                       </p>
                     </div>
@@ -754,13 +1018,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                   {/* ADVANCED DYNAMIC PHOTO CONTROLS (AVAILABLE WHEN PHOTO EXISTS) */}
                   {cv.photoUrl && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3.5 animate-fadeIn">
+                    <div className="pt-3 border-t border-black/10 dark:border-white/10 space-y-3.5 animate-fadeIn">
                       
                       {/* 1. Size Slider */}
                       <div className="space-y-1">
-                        <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                        <div className="flex justify-between text-xs font-bold text-neutral-700 dark:text-neutral-300">
                           <span>Taille de la photo :</span>
-                          <span className="text-blue-600 dark:text-blue-400 font-mono">{cv.photoTaille || 80} px</span>
+                          <span className="text-black dark:text-white font-mono">{cv.photoTaille || 80} px</span>
                         </div>
                         <input
                           type="range"
@@ -768,21 +1032,21 @@ export const EditorView: React.FC<EditorViewProps> = ({
                           max="220"
                           value={cv.photoTaille || 80}
                           onChange={(e) => setCv(prev => ({ ...prev, photoTaille: parseInt(e.target.value) }))}
-                          className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                          className="w-full accent-black dark:accent-white cursor-pointer h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg"
                         />
                       </div>
 
                       {/* 2. Position / Emplacement */}
                       <div className="space-y-1.5">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Emplacement de la photo :</span>
+                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Emplacement de la photo :</span>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
                             onClick={() => setCv(prev => ({ ...prev, photoPosition: 'in-header' }))}
                             className={`py-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                               (cv.photoPosition || 'in-header') === 'in-header'
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                                : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800'
                             }`}
                           >
                             Dans l'En-tête (Top)
@@ -792,8 +1056,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                             onClick={() => setCv(prev => ({ ...prev, photoPosition: 'in-sidebar' }))}
                             className={`py-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                               cv.photoPosition === 'in-sidebar'
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs'
+                                : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800'
                             }`}
                           >
                             Dans la Sidebar
@@ -803,7 +1067,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                       {/* 3. Shape Selector & Custom Border Radius */}
                       <div className="space-y-2">
-                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Forme de la photo :</span>
+                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Forme de la photo :</span>
                         <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                           {[
                             { id: 'ronde', label: 'Ronde' },
@@ -819,8 +1083,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                               onClick={() => setCv(prev => ({ ...prev, photoForme: shape.id as any, photoRayon: undefined }))}
                               className={`py-1.5 px-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer text-center ${
                                 (cv.photoForme || 'ronde') === shape.id && cv.photoRayon === undefined
-                                  ? 'bg-blue-600 text-white border-blue-600'
-                                  : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                                  ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white'
+                                  : 'bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-200 dark:border-neutral-800'
                               }`}
                             >
                               {shape.label}
@@ -830,9 +1094,9 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                         {/* Custom Border Radius Slider */}
                         <div className="space-y-1 pt-1">
-                          <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                          <div className="flex justify-between text-[11px] font-bold text-neutral-600 dark:text-neutral-400">
                             <span>Rayon d'arrondi sur-mesure (0px = carré, 100px = rond) :</span>
-                            <span className="text-blue-600 dark:text-blue-400 font-mono">{cv.photoRayon ?? (cv.photoForme === 'carree' ? 0 : 50)} px</span>
+                            <span className="text-black dark:text-white font-mono">{cv.photoRayon ?? (cv.photoForme === 'carree' ? 0 : 50)} px</span>
                           </div>
                           <input
                             type="range"
@@ -840,7 +1104,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                             max="100"
                             value={cv.photoRayon ?? (cv.photoForme === 'carree' ? 0 : 50)}
                             onChange={(e) => setCv(prev => ({ ...prev, photoRayon: parseInt(e.target.value) }))}
-                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                            className="w-full accent-black dark:accent-white cursor-pointer h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg"
                           />
                         </div>
                       </div>
@@ -848,30 +1112,30 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       {/* 4. Border Thickness & Color */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         <div className="space-y-1">
-                          <div className="flex justify-between text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                          <div className="flex justify-between text-[11px] font-bold text-neutral-600 dark:text-neutral-400">
                             <span>Épaisseur de bordure :</span>
-                            <span className="text-blue-600 dark:text-blue-400 font-mono">{cv.photoBordureEpaisseur ?? 2} px</span>
+                            <span className="text-black dark:text-white font-mono">{cv.photoBordureEpaisseur ?? 2} px</span>
                           </div>
                           <input
                             type="range"
                             min="0"
-                            max="10"
+                            max="100"
                             value={cv.photoBordureEpaisseur ?? 2}
                             onChange={(e) => setCv(prev => ({ ...prev, photoBordureEpaisseur: parseInt(e.target.value) }))}
-                            className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                            className="w-full accent-black dark:accent-white cursor-pointer h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg"
                           />
                         </div>
 
                         <div className="space-y-1">
-                          <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Couleur de bordure :</span>
+                          <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400">Couleur de bordure :</span>
                           <div className="flex items-center gap-2">
                             <input
                               type="color"
                               value={cv.photoBordureCouleur || '#FFFFFF'}
                               onChange={(e) => setCv(prev => ({ ...prev, photoBordureCouleur: e.target.value }))}
-                              className="w-8 h-8 rounded-lg border border-slate-300 dark:border-slate-700 cursor-pointer p-0.5 bg-white dark:bg-slate-800"
+                              className="w-8 h-8 rounded-lg border border-neutral-300 dark:border-neutral-700 cursor-pointer p-0.5 bg-white dark:bg-black"
                             />
-                            <span className="text-xs font-mono text-slate-600 dark:text-slate-400 uppercase">
+                            <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 uppercase">
                               {cv.photoBordureCouleur || '#FFFFFF'}
                             </span>
                           </div>
@@ -883,35 +1147,35 @@ export const EditorView: React.FC<EditorViewProps> = ({
                 </div>
 
                 {/* SECTIONS LIST WITH DND & CONTROLS */}
-                <div className="bg-slate-100/80 dark:bg-slate-900 p-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="bg-neutral-100 dark:bg-neutral-900 p-2.5 rounded-xl border border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-2 mb-3">
                   <div className="flex items-center space-x-1.5">
                     <button
                       type="button"
                       onClick={collapseAllSections}
-                      className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 bg-white dark:bg-black hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-black/10 dark:border-white/10 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                       title="Réduire toutes les sections"
                     >
-                      <FolderClosed className="w-3.5 h-3.5 text-slate-500" />
+                      <FolderClosed className="w-3.5 h-3.5 text-neutral-500" />
                       <span>Tout réduire</span>
                     </button>
                     <button
                       type="button"
                       onClick={expandAllSections}
-                      className="px-2.5 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 bg-white dark:bg-black hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-black/10 dark:border-white/10 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
                       title="Déplier toutes les sections"
                     >
-                      <FolderOpen className="w-3.5 h-3.5 text-blue-500" />
+                      <FolderOpen className="w-3.5 h-3.5 text-black dark:text-white" />
                       <span>Tout déplier</span>
                     </button>
                   </div>
 
                   {(cv.nombreColonnes || 2) === 2 && (
-                    <div className="flex items-center space-x-1 bg-white dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 text-[10px] font-bold">
+                    <div className="flex items-center space-x-1 bg-white dark:bg-black p-0.5 rounded-lg border border-black/10 dark:border-white/10 text-[10px] font-bold">
                       <button
                         type="button"
                         onClick={() => setColumnFilter('toutes')}
-                        className={`px-2 py-0.5 rounded-lg transition-colors ${
-                          columnFilter === 'toutes' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'
+                        className={`px-2 py-0.5 rounded transition-colors ${
+                          columnFilter === 'toutes' ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs' : 'text-neutral-600 dark:text-neutral-300'
                         }`}
                       >
                         Toutes ({cv.sections.length})
@@ -919,8 +1183,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setColumnFilter('gauche')}
-                        className={`px-2 py-0.5 rounded-lg transition-colors ${
-                          columnFilter === 'gauche' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'
+                        className={`px-2 py-0.5 rounded transition-colors ${
+                          columnFilter === 'gauche' ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs' : 'text-neutral-600 dark:text-neutral-300'
                         }`}
                       >
                         ◀ Col. Gauche ({(cv.sections || []).filter(s => (s.colonne || 'principale') === 'gauche').length})
@@ -928,8 +1192,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setColumnFilter('droite')}
-                        className={`px-2 py-0.5 rounded-lg transition-colors ${
-                          columnFilter === 'droite' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300'
+                        className={`px-2 py-0.5 rounded transition-colors ${
+                          columnFilter === 'droite' ? 'bg-black text-white dark:bg-white dark:text-black shadow-xs' : 'text-neutral-600 dark:text-neutral-300'
                         }`}
                       >
                         ▶ Col. Droite ({(cv.sections || []).filter(s => (s.colonne || 'principale') === 'droite' || (s.colonne || 'principale') === 'principale').length})
@@ -972,7 +1236,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Nom & Prénom :</label>
-                                <input
+                                <ClearableInput
                                   type="text"
                                   value={(sec.contenu as any)?.nomComplet || ''}
                                   onChange={(e) => {
@@ -988,7 +1252,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Titre professionnel :</label>
-                                <input
+                                <ClearableInput
                                   type="text"
                                   value={(sec.contenu as any)?.titreProfessionnel || ''}
                                   onChange={(e) => {
@@ -1004,7 +1268,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Email :</label>
-                                <input
+                                <ClearableInput
                                   type="email"
                                   value={(sec.contenu as any)?.email || ''}
                                   onChange={(e) => {
@@ -1020,7 +1284,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Téléphone :</label>
-                                <input
+                                <ClearableInput
                                   type="tel"
                                   value={(sec.contenu as any)?.telephone || ''}
                                   onChange={(e) => {
@@ -1036,7 +1300,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Adresse / Ville :</label>
-                                <input
+                                <ClearableInput
                                   type="text"
                                   value={(sec.contenu as any)?.adresse || ''}
                                   onChange={(e) => {
@@ -1052,7 +1316,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
                               <div>
                                 <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Site Web / LinkedIn :</label>
-                                <input
+                                <ClearableInput
                                   type="text"
                                   value={(sec.contenu as any)?.linkedin || ''}
                                   onChange={(e) => {
@@ -1100,7 +1364,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                               {cv.grandTitreMode === 'custom' && (
                                 <div>
                                   <label className="text-[11px] font-bold text-blue-800 dark:text-blue-300">Texte du Grand Titre Personnalisé :</label>
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={cv.grandTitreTexte || ''}
                                     onChange={(e) => setCv(prev => ({ ...prev, grandTitreTexte: e.target.value }))}
@@ -1309,7 +1573,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={exp.poste}
                                     placeholder="Intitulé du poste (ex: Chef de Projet)"
@@ -1323,7 +1587,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={exp.entreprise}
                                     placeholder="Entreprise / Organisation"
@@ -1337,7 +1601,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={exp.dateDebut}
                                     placeholder="Date début (ex: Jan 2020)"
@@ -1351,7 +1615,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={exp.dateFin}
                                     placeholder="Date fin (ex: Présent)"
@@ -1456,7 +1720,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={edu.diplome}
                                     placeholder="Diplôme / Intitulé"
@@ -1470,7 +1734,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={edu.etablissement}
                                     placeholder="École / Université"
@@ -1484,7 +1748,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={edu.dateDebut}
                                     placeholder="Date début (ex: 2018)"
@@ -1498,7 +1762,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={edu.dateFin}
                                     placeholder="Date fin (ex: 2021)"
@@ -1547,7 +1811,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                             {(sec.contenu as CompetenceItem[])?.map((sk, skIdx) => (
                               <div key={sk.id} className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
                                 <div className="flex items-center space-x-2">
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={sk.nom}
                                     placeholder="Nom de la compétence"
@@ -1638,7 +1902,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {(sec.contenu as LangueItem[])?.map((lg, lgIdx) => (
                                 <div key={lg.id} className="p-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center space-x-2">
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={lg.langue}
                                     placeholder="Langue"
@@ -1652,7 +1916,7 @@ export const EditorView: React.FC<EditorViewProps> = ({
                                     }}
                                     className="flex-1 px-2 py-1 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none"
                                   />
-                                  <input
+                                  <ClearableInput
                                     type="text"
                                     value={lg.niveau}
                                     placeholder="Niveau"
@@ -1768,6 +2032,8 @@ export const EditorView: React.FC<EditorViewProps> = ({
 
               <CVPreview
                 cv={cv}
+                userTier={effectiveUserTier}
+                user={user}
                 onMoveSectionUp={handleMoveSectionUp}
                 onMoveSectionDown={handleMoveSectionDown}
                 onUpdateColor={(color) => setCv(prev => ({ ...prev, couleurAccent: color }))}
@@ -1784,18 +2050,20 @@ export const EditorView: React.FC<EditorViewProps> = ({
         </div>
       </main>
 
-      {/* MOBILE BOTTOM TOOLBAR (OPTIMIZED TOUCH NAVIGATION) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 px-3 py-2 flex items-center justify-between md:hidden shadow-2xl safe-area-bottom">
+      {/* MOBILE BOTTOM TOOLBAR (STRICTLY MONOCHROME BLACK & WHITE) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-black border-t border-black/15 dark:border-white/20 px-2 py-2 flex items-center justify-between md:hidden shadow-2xl safe-area-bottom">
         {/* Assistant / Wizard */}
         <button
           type="button"
           onClick={() => { setEditorMode('form'); setActiveTab('wizard'); }}
           className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'wizard' && editorMode === 'form' ? 'text-blue-400 font-extrabold' : 'text-slate-400'
+            activeTab === 'wizard' && editorMode === 'form'
+              ? 'bg-black text-white dark:bg-white dark:text-black font-extrabold'
+              : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'
           }`}
         >
-          <Sparkles className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Assistant</span>
+          <Sparkles className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 font-bold">Assistant</span>
         </button>
 
         {/* Sections */}
@@ -1803,11 +2071,13 @@ export const EditorView: React.FC<EditorViewProps> = ({
           type="button"
           onClick={() => { setEditorMode('form'); setActiveTab('sections'); }}
           className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'sections' && editorMode === 'form' ? 'text-blue-400 font-extrabold' : 'text-slate-400'
+            activeTab === 'sections' && editorMode === 'form'
+              ? 'bg-black text-white dark:bg-white dark:text-black font-extrabold'
+              : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'
           }`}
         >
-          <Layers className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Sections</span>
+          <Layers className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 font-bold">Sections</span>
         </button>
 
         {/* Studio / Design */}
@@ -1815,107 +2085,319 @@ export const EditorView: React.FC<EditorViewProps> = ({
           type="button"
           onClick={() => { setEditorMode('form'); setActiveTab('style'); }}
           className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition-all cursor-pointer ${
-            activeTab === 'style' && editorMode === 'form' ? 'text-purple-400 font-extrabold' : 'text-slate-400'
+            activeTab === 'style' && editorMode === 'form'
+              ? 'bg-black text-white dark:bg-white dark:text-black font-extrabold'
+              : 'text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white'
           }`}
         >
-          <Sliders className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Design</span>
-        </button>
-
-        {/* Édition Visuelle */}
-        <button
-          type="button"
-          onClick={() => { setEditorMode('visual'); setActiveTab('visual'); }}
-          className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition-all cursor-pointer ${
-            editorMode === 'visual' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'
-          }`}
-        >
-          <Palette className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Visuel</span>
+          <Sliders className="w-4 h-4" />
+          <span className="text-[10px] mt-0.5 font-bold">Design</span>
         </button>
 
         {/* Aperçu Plein Écran */}
         <button
           type="button"
           onClick={() => setShowMobilePreviewModal(true)}
-          className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-blue-600 text-white shadow-md cursor-pointer active:scale-95 transition-transform"
+          className="flex flex-col items-center justify-center px-3 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white shadow-md cursor-pointer active:scale-95 transition-transform"
         >
-          <Eye className="w-5 h-5" />
+          <Eye className="w-4 h-4" />
           <span className="text-[10px] mt-0.5 font-bold">Aperçu</span>
         </button>
 
-        {/* Télécharger PDF */}
+        {/* Télécharger / Exporter - Icon Only */}
         <button
           type="button"
-          onClick={handleExportPDF}
-          className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-emerald-600 text-white shadow-md cursor-pointer active:scale-95 transition-transform"
+          onClick={() => setShowExportMenu(true)}
+          className="flex items-center justify-center p-2 rounded-xl bg-white text-black dark:bg-black dark:text-white border-2 border-black dark:border-white shadow-md cursor-pointer active:scale-95 transition-transform"
+          title="Télécharger le CV"
+          aria-label="Télécharger"
         >
-          <Download className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5 font-bold">PDF</span>
+          <Download className="w-5 h-5 stroke-[2.5]" />
         </button>
       </div>
 
-      {/* MOBILE PREVIEW MODAL WITH ZOOM CONTROL */}
+      {/* MOBILE FULLSCREEN PREVIEW MODAL (ZERO PADDING, PROPORTIONAL FIT & ZOOM/DEZOOM) */}
       {showMobilePreviewModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md p-2 sm:p-4 flex flex-col items-center justify-between overflow-hidden">
-          {/* Header Controls */}
-          <div className="w-full max-w-2xl bg-slate-900 rounded-2xl px-4 py-2.5 border border-slate-800 flex items-center justify-between shadow-xl shrink-0">
-            <span className="text-xs font-black uppercase text-white flex items-center gap-2">
-              <Eye className="w-4 h-4 text-blue-500" />
-              <span>Aperçu Document A4</span>
+        <div className="fixed inset-0 z-50 bg-white dark:bg-black text-black dark:text-white flex flex-col items-center justify-between overflow-hidden animate-fadeIn">
+          {/* Header Controls (Black & White) */}
+          <div className="w-full bg-white dark:bg-black border-b border-black/15 dark:border-white/20 px-3 py-2 flex items-center justify-between shadow-sm shrink-0">
+            <span className="text-xs font-black uppercase text-black dark:text-white flex items-center gap-1.5">
+              <Eye className="w-4 h-4" />
+              <span>Aperçu A4</span>
             </span>
 
-            {/* Zoom Slider */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-slate-400">Zoom: {Math.round(mobileZoom * 100)}%</span>
-              <input
-                type="range"
-                min="0.35"
-                max="1.1"
-                step="0.05"
-                value={mobileZoom}
-                onChange={(e) => setMobileZoom(parseFloat(e.target.value))}
-                className="w-20 accent-blue-600 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-1 bg-black/5 dark:bg-white/10 p-1 rounded-xl border border-black/10 dark:border-white/15">
               <button
                 type="button"
-                onClick={handleExportPDF}
-                className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer"
+                onClick={() => setMobileZoom(prev => Math.max(0.25, parseFloat((prev - 0.08).toFixed(2))))}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-lg text-black dark:text-white cursor-pointer transition-colors"
+                title="Dézoomer"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>PDF</span>
+                <ZoomOut className="w-3.5 h-3.5" />
               </button>
+
+              <span className="text-[10px] font-mono font-bold px-1 min-w-9 text-center text-black dark:text-white">
+                {Math.round(mobileZoom * 100)}%
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setMobileZoom(prev => Math.min(1.5, parseFloat((prev + 0.08).toFixed(2))))}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-lg text-black dark:text-white cursor-pointer transition-colors"
+                title="Zoomer"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileZoom(getFitZoom())}
+                className="p-1 hover:bg-black/10 dark:hover:bg-white/20 rounded-lg text-black dark:text-white cursor-pointer transition-colors hidden xs:block"
+                title="Ajuster à l'écran"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setShowExportMenu(true)}
+                className="p-2 bg-black text-white dark:bg-white dark:text-black rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer border border-black dark:border-white shadow-xs"
+                title="Télécharger le CV"
+                aria-label="Télécharger"
+              >
+                <Download className="w-4 h-4 stroke-[2.5]" />
+              </button>
+              
               <button
                 type="button"
                 onClick={() => setShowMobilePreviewModal(false)}
-                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl cursor-pointer"
+                className="p-1.5 text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Scaled Preview Canvas Body */}
-          <div className="w-full flex-1 overflow-auto flex items-start justify-center p-2">
+          {/* Scaled Preview Canvas Body (Zero outer padding to take 100% full screen width proportions) */}
+          <div className="w-full flex-1 overflow-auto flex items-start justify-center p-0 bg-white dark:bg-black touch-pan-x touch-pan-y">
             <div
               style={{
+                width: '794px',
                 transform: `scale(${mobileZoom})`,
                 transformOrigin: 'top center',
-                transition: 'transform 0.15s ease'
+                transition: 'transform 0.1s ease-out',
+                marginBottom: `${(1 - mobileZoom) * -1123}px`
               }}
-              className="shrink-0 shadow-2xl rounded-lg overflow-hidden my-2"
+              className="shrink-0 bg-white shadow-xl overflow-hidden"
             >
               <CVPreview
                 cv={cv}
+                userTier={effectiveUserTier}
+                user={user}
                 onSectionsReorder={handleSectionsReorder}
                 onUpdateSectionZone={handleUpdateSectionZone}
                 onUpdateCV={(updated) => setCv(prev => ({ ...prev, ...updated }))}
                 interactivePreview={false}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MULTI-FORMAT EXPORT MODAL WITH STRICT AUTHENTICATION */}
+      {showExportMenu && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white dark:bg-neutral-900 border border-black/15 dark:border-white/15 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            
+            <div className="flex items-center justify-between border-b border-black/10 dark:border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold">
+                  <Download className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-black dark:text-white">Exporter votre CV</h3>
+                  <p className="text-[11px] text-neutral-500">Choisissez votre format de téléchargement</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExportMenu(false)}
+                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Auth status indicator */}
+            {!user ? (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/50 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-black">Connexion obligatoire :</span>
+                  <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+                    Vous devez vous connecter ou créer un compte gratuit pour télécharger votre CV (PDF, PNG ou autres formats).
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/50 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-200">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span className="font-bold">Connecté ({user.email || user.name})</span>
+                </div>
+                <span className="text-[10px] font-black uppercase px-1.5 py-0.5 bg-emerald-600 text-white rounded">
+                  {user.role === 'ADMIN' ? 'PREMIUM (ADMIN)' : (effectiveUserTier || 'Freemium').toUpperCase()}
+                </span>
+              </div>
+            )}
+
+            {/* Formats Grid */}
+            <div className="space-y-2">
+              {/* 1. PDF Standard */}
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                className="w-full p-3 rounded-xl border border-black/10 dark:border-white/10 bg-neutral-50 dark:bg-neutral-800 hover:border-black dark:hover:border-white text-left flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/60 text-red-600 flex items-center justify-center font-black text-xs">
+                    PDF
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs text-black dark:text-white block group-hover:underline">
+                      Document PDF Haute Définition (.pdf)
+                    </span>
+                    <span className="text-[10px] text-neutral-500">Idéal pour l'impression et les candidatures</span>
+                  </div>
+                </div>
+                <Download className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+              </button>
+
+              {/* 2. Image PNG */}
+              <button
+                type="button"
+                onClick={handleExportImage}
+                className="w-full p-3 rounded-xl border border-black/10 dark:border-white/10 bg-neutral-50 dark:bg-neutral-800 hover:border-black dark:hover:border-white text-left flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center font-black text-xs">
+                    PNG
+                  </div>
+                  <div>
+                    <span className="font-bold text-xs text-black dark:text-white block group-hover:underline">
+                      Image Haute Résolution (.png)
+                    </span>
+                    <span className="text-[10px] text-neutral-500">Pour aperçu rapide, web ou réseaux sociaux</span>
+                  </div>
+                </div>
+                <Download className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+              </button>
+
+              {/* 3. Word (.doc) Multi-format */}
+              <button
+                type="button"
+                onClick={handleExportWord}
+                className="w-full p-3 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 text-left flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs">
+                    DOC
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-black dark:text-white block group-hover:underline">
+                        Microsoft Word (.doc)
+                      </span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-purple-600 text-white rounded">
+                        PRO
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500">Format modifiable sous Word & OpenOffice</span>
+                  </div>
+                </div>
+                {effectiveUserTier === 'freemium' ? (
+                  <Lock className="w-4 h-4 text-purple-600" />
+                ) : (
+                  <Download className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+                )}
+              </button>
+
+              {/* 4. JSON Structuré */}
+              <button
+                type="button"
+                onClick={handleExportJSON}
+                className="w-full p-3 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 text-left flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-black text-[10px]">
+                    JSON
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-black dark:text-white block group-hover:underline">
+                        Données JSON Structurées (.json)
+                      </span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-purple-600 text-white rounded">
+                        PRO
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500">Sauvegarde brute & compatibilité ATS</span>
+                  </div>
+                </div>
+                {effectiveUserTier === 'freemium' ? (
+                  <Lock className="w-4 h-4 text-purple-600" />
+                ) : (
+                  <Download className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+                )}
+              </button>
+
+              {/* 5. Texte Brut */}
+              <button
+                type="button"
+                onClick={handleExportPlainText}
+                className="w-full p-3 rounded-xl border border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/30 hover:border-purple-500 text-left flex items-center justify-between transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-neutral-700 text-white flex items-center justify-center font-black text-xs">
+                    TXT
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-xs text-black dark:text-white block group-hover:underline">
+                        Fichier Texte Brut (.txt)
+                      </span>
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 bg-purple-600 text-white rounded">
+                        PRO
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-neutral-500">Texte épuré sans mise en forme</span>
+                  </div>
+                </div>
+                {effectiveUserTier === 'freemium' ? (
+                  <Lock className="w-4 h-4 text-purple-600" />
+                ) : (
+                  <Download className="w-4 h-4 text-neutral-400 group-hover:text-black dark:group-hover:text-white" />
+                )}
+              </button>
+            </div>
+
+            {!user && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExportMenu(false);
+                  onOpenAuth();
+                }}
+                className="w-full py-2.5 bg-black text-white dark:bg-white dark:text-black rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-md hover:opacity-90"
+              >
+                <span>Se connecter / S'inscrire</span>
+              </button>
+            )}
+
           </div>
         </div>
       )}
@@ -1943,6 +2425,21 @@ export const EditorView: React.FC<EditorViewProps> = ({
           onApplyPersonalizedCV={(personalizedCV) => {
             setCv(personalizedCV);
           }}
+        />
+      )}
+
+      {/* Paid Feature Usage Export Lock Modal */}
+      {showPaidExportModal && (
+        <PaidUsageExportModal
+          isOpen={showPaidExportModal}
+          langue={langue}
+          paidUsages={detectedPaidUsages}
+          onClose={() => setShowPaidExportModal(false)}
+          onUpgrade={(tier) => {
+            setShowPaidExportModal(false);
+            onOpenPayment(cv);
+          }}
+          onResetToFreeDefaults={handleResetToFreeDefaults}
         />
       )}
 

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Language, Section } from '../types';
 import { getTranslation } from '../i18n/translations';
 import { parseCVTextToSections } from '../utils/cvParser';
-import { Upload, FileText, AlertCircle, X, AlignLeft } from 'lucide-react';
+import { Upload, FileText, AlertCircle, X, AlignLeft, RefreshCw } from 'lucide-react';
 
 interface ImportModalProps {
   langue: Language;
@@ -15,8 +15,27 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
 
   const [activeTab, setActiveTab] = useState<'file' | 'text'>('file');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [manualText, setManualText] = useState('');
+
+  useEffect(() => {
+    let timer: any;
+    if (isProcessing) {
+      setProgressPercent(15);
+      timer = setInterval(() => {
+        setProgressPercent((prev) => {
+          if (prev < 35) return prev + 10;
+          if (prev < 75) return prev + 6;
+          if (prev < 94) return prev + 2;
+          return prev;
+        });
+      }, 300);
+    } else {
+      setProgressPercent(0);
+    }
+    return () => clearInterval(timer);
+  }, [isProcessing]);
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -44,23 +63,37 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
       const formData = new FormData();
       formData.append('file', selectedFile);
 
+      const token = localStorage.getItem('cv_builder_token');
       const response = await fetch('/api/import/parse', {
         method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: formData,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok || data.error) {
-        throw new Error(data.error || 'Erreur lors de l\'extraction du texte.');
+        if (response.status === 429 || data.error?.includes('quota') || data.error?.includes('token') || data.error?.includes('Resource')) {
+          throw new Error('Le quota de traitement automatique est temporairement saturé. Veuillez copier et coller le texte directement dans l\'onglet "Coller du texte brut".');
+        }
+        throw new Error(data.error || 'Erreur lors de l\'extraction du document. Essayez l\'onglet "Coller du texte brut".');
       }
 
       const extractedText = data.text;
-      if (!extractedText || extractedText.trim().length < 20) {
-        throw new Error('Impossible d\'extraire du texte de ce fichier. Il s\'agit peut-être d\'un document scanné.');
+      let sections: Section[] = [];
+
+      if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
+        sections = data.sections;
+      } else if (extractedText && typeof extractedText === 'string' && extractedText.trim().length >= 10) {
+        sections = parseCVTextToSections(extractedText.trim(), langue);
+      } else {
+        throw new Error(
+          'Impossible d\'extraire les informations de ce document. Vous pouvez copier-coller le texte directement dans l\'onglet "Coller du texte brut".'
+        );
       }
 
-      const sections = parseCVTextToSections(extractedText, langue);
       const cleanTitle = `CV Importé - ${selectedFile.name.replace(/\.[^/.]+$/, '')}`;
 
       setIsProcessing(false);
@@ -73,22 +106,48 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
     }
   };
 
-  const handleManualImport = () => {
+  const handleManualImport = async () => {
     if (!manualText || manualText.trim().length < 20) {
       setErrorMessage('Veuillez coller au moins un texte de CV valide (au moins 20 caractères).');
       return;
     }
 
     setIsProcessing(true);
+    setErrorMessage('');
+
     try {
-      const sections = parseCVTextToSections(manualText.trim(), langue);
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
+      const response = await fetch('/api/import/parse-text', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ text: manualText.trim(), langue })
+      });
+
+      let sections: Section[] = [];
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (data.sections && Array.isArray(data.sections) && data.sections.length > 0) {
+          sections = data.sections;
+        }
+      }
+
+      if (sections.length === 0) {
+        sections = parseCVTextToSections(manualText.trim(), langue);
+      }
+
       const cleanTitle = `CV Importé - Saisie Manuelle`;
       setIsProcessing(false);
       onImportComplete(sections, cleanTitle);
       onClose();
     } catch (err: any) {
-      setErrorMessage('Erreur lors du traitement du texte. Veuillez vérifier le contenu.');
+      console.error('Error in manual import:', err);
+      const sections = parseCVTextToSections(manualText.trim(), langue);
       setIsProcessing(false);
+      onImportComplete(sections, 'CV Importé - Saisie Manuelle');
+      onClose();
     }
   };
 
@@ -104,7 +163,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
             </div>
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white text-base">{t('importModalTitle')}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Extraction et conversion fidèle sans réécriture par IA</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Reconnaissance automatique et OCR intelligent de CV (PDF, Word, Scans, Images)</p>
             </div>
           </div>
 
@@ -127,7 +186,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Fichier PDF / DOCX / TXT</span>
+            <span>Fichier (PDF, Word, Scanné, Image)</span>
           </button>
           <button
             onClick={() => { setActiveTab('text'); setErrorMessage(''); }}
@@ -173,14 +232,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
 
               <div>
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('dropzoneText')}</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('dropzoneHint')}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">PDF, DOCX, TXT ou scan image (.png, .jpg) jusqu'à 15 Mo</p>
               </div>
 
               <label className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer">
-                <span>Parcourir mes fichiers (.pdf, .docx, .txt)</span>
+                <span>Parcourir mes fichiers (PDF, Word, Scan, Image)</span>
                 <input
                   type="file"
-                  accept=".pdf,.docx,.txt"
+                  accept=".pdf,.docx,.doc,.txt,.rtf,.png,.jpg,.jpeg,.webp"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
@@ -209,8 +268,27 @@ export const ImportModal: React.FC<ImportModalProps> = ({ langue, onClose, onImp
           )}
 
           {isProcessing && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/80 rounded-xl text-center text-xs text-blue-700 dark:text-blue-300 font-bold animate-pulse border border-blue-200 dark:border-blue-800">
-              {t('importing')}
+            <div className="p-5 bg-slate-900 border border-blue-500/40 rounded-2xl space-y-3 shadow-xl">
+              <div className="flex items-center justify-between text-xs font-bold text-blue-300">
+                <span className="flex items-center gap-2 text-white">
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                  {progressPercent < 35
+                    ? (langue === 'ar' ? '1. قراءة وتحليل المستند...' : langue === 'en' ? '1. Reading and analyzing document...' : '1. Lecture et analyse du fichier...')
+                    : progressPercent < 75
+                    ? (langue === 'ar' ? '2. التعرف الضوئي OCR واستخراج الأقسام...' : langue === 'en' ? '2. OCR & Section Extraction...' : '2. Extraction OCR & reconnaissance des sections...')
+                    : (langue === 'ar' ? '3. الهيكلة والتوزيع الذكي في النموذج...' : langue === 'en' ? '3. Smart Section Structuring...' : '3. Structuration intelligente des données...')}
+                </span>
+                <span className="font-mono text-emerald-400 font-black text-sm">{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-slate-950 rounded-full h-3.5 p-0.5 border border-slate-800 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-md"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-slate-400 text-center pt-1">
+                {langue === 'ar' ? 'يرجى الانتظار بضع ثوانٍ بينما يقوم المساعد الذكي بمعالجة السيرة.' : langue === 'en' ? 'Please hold on a moment while AI builds your structured resume.' : 'Veuillez patienter quelques secondes pendant l\'extraction et la conversion.'}
+              </p>
             </div>
           )}
         </div>

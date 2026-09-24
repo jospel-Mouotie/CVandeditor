@@ -1,5 +1,5 @@
 import React from 'react';
-import { Palette, Image as ImageIcon, Sliders, Grid } from 'lucide-react';
+import { Palette } from 'lucide-react';
 
 interface BackgroundControlPanelProps {
   label: string;
@@ -48,19 +48,19 @@ export const BackgroundControlPanel: React.FC<BackgroundControlPanelProps> = ({
   };
 
   return (
-    <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+    <div className="p-3 bg-neutral-50 dark:bg-neutral-900/60 rounded-xl border border-neutral-200 dark:border-neutral-800 space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-          <Palette className="w-3.5 h-3.5 text-blue-600" />
+        <span className="text-xs font-black uppercase tracking-wider text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+          <Palette className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
           <span>{label}</span>
         </span>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-800 uppercase">
+        <span className="text-[10px] font-bold text-neutral-900 dark:text-neutral-100 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 uppercase">
           {backgroundType}
         </span>
       </div>
 
       {/* Type Tabs */}
-      <div className="grid grid-cols-4 gap-1 p-1 bg-slate-200/60 dark:bg-slate-800 rounded-lg">
+      <div className="grid grid-cols-4 gap-1 p-1 bg-neutral-200/60 dark:bg-neutral-800 rounded-lg">
         {[
           { id: 'solid', label: 'Couleur' },
           { id: 'gradient', label: 'Dégradé' },
@@ -73,8 +73,8 @@ export const BackgroundControlPanel: React.FC<BackgroundControlPanelProps> = ({
             onClick={() => onChange({ backgroundType: tab.id as any })}
             className={`py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
               backgroundType === tab.id
-                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-xs'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-2xs'
+                : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100'
             }`}
           >
             {tab.label}
@@ -89,9 +89,9 @@ export const BackgroundControlPanel: React.FC<BackgroundControlPanelProps> = ({
             type="color"
             value={colorSolid || '#FFFFFF'}
             onChange={(e) => onChange({ colorSolid: e.target.value })}
-            className="w-8 h-8 rounded-lg cursor-pointer border-0"
+            className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent"
           />
-          <span className="text-xs font-mono font-bold uppercase">{colorSolid}</span>
+          <span className="text-xs font-mono font-bold uppercase text-neutral-800 dark:text-neutral-200">{colorSolid}</span>
         </div>
       )}
 
@@ -99,27 +99,27 @@ export const BackgroundControlPanel: React.FC<BackgroundControlPanelProps> = ({
       {backgroundType === 'gradient' && (
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-bold text-slate-500 block">Départ :</label>
+            <label className="text-[10px] font-bold text-neutral-500 block">Départ :</label>
             <div className="flex items-center gap-1.5 mt-0.5">
               <input
                 type="color"
                 value={colorStart || '#3B82F6'}
                 onChange={(e) => onChange({ colorStart: e.target.value })}
-                className="w-7 h-7 rounded cursor-pointer border-0"
+                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
               />
-              <span className="text-[11px] font-mono uppercase">{colorStart}</span>
+              <span className="text-[11px] font-mono uppercase text-neutral-800 dark:text-neutral-200">{colorStart}</span>
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 block">Arrivée :</label>
+            <label className="text-[10px] font-bold text-neutral-500 block">Arrivée :</label>
             <div className="flex items-center gap-1.5 mt-0.5">
               <input
                 type="color"
                 value={colorEnd || '#1E3A8A'}
                 onChange={(e) => onChange({ colorEnd: e.target.value })}
-                className="w-7 h-7 rounded cursor-pointer border-0"
+                className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent"
               />
-              <span className="text-[11px] font-mono uppercase">{colorEnd}</span>
+              <span className="text-[11px] font-mono uppercase text-neutral-800 dark:text-neutral-200">{colorEnd}</span>
             </div>
           </div>
         </div>
@@ -128,81 +128,48 @@ export const BackgroundControlPanel: React.FC<BackgroundControlPanelProps> = ({
       {/* PATTERN */}
       {backgroundType === 'pattern' && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-600">Couleur de fond :</span>
-            <input
-              type="color"
-              value={colorSolid || '#FFFFFF'}
-              onChange={(e) => onChange({ colorSolid: e.target.value })}
-              className="w-6 h-6 rounded cursor-pointer border-0"
-            />
-          </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {[
-              { id: 'dots', label: 'Points' },
-              { id: 'stripes', label: 'Rayures' },
-              { id: 'grid', label: 'Grille' },
-              { id: 'mesh', label: 'Maille' },
-              { id: 'waves', label: 'Vagues' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => onChange({ patternName: p.id })}
-                className={`p-1.5 rounded-lg border text-[10px] font-bold cursor-pointer transition-all ${
-                  patternName === p.id
-                    ? 'border-blue-600 bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
-                    : 'border-slate-200 dark:border-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          <label className="text-[10px] font-bold text-neutral-500 block">Motif géométrique :</label>
+          <select
+            value={patternName || 'dots'}
+            onChange={(e) => onChange({ patternName: e.target.value })}
+            className="w-full p-1.5 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg text-xs font-bold text-neutral-900 dark:text-neutral-100"
+          >
+            <option value="dots">Points fins (Dots)</option>
+            <option value="grid">Quadrillage (Grid)</option>
+            <option value="lines">Lignes diagonales (Lines)</option>
+            <option value="waves">Vagues élégantes (Waves)</option>
+            <option value="hexagons">Hexagones ATS</option>
+          </select>
         </div>
       )}
 
       {/* IMAGE */}
       {backgroundType === 'image' && (
         <div className="space-y-2">
-          <label className="block w-full text-center p-3 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl hover:border-blue-500 cursor-pointer bg-white dark:bg-slate-800 transition-colors">
-            <ImageIcon className="w-5 h-5 mx-auto text-blue-600 mb-1" />
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {imageUrl ? 'Changer l\'image de fond' : 'Uploader une image de fond'}
-            </span>
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-          </label>
-          {imageUrl && (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-12 h-12 rounded-lg border border-slate-200 bg-cover bg-center"
-                style={{ backgroundImage: `url(${imageUrl})` }}
-              />
-              <button
-                type="button"
-                onClick={() => onChange({ imageUrl: '', backgroundType: 'solid' })}
-                className="text-xs font-bold text-rose-600 hover:underline"
-              >
-                Supprimer l'image
-              </button>
-            </div>
-          )}
+          <label className="text-[10px] font-bold text-neutral-500 block">Image d'arrière-plan :</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full text-xs text-neutral-600 dark:text-neutral-300 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-neutral-800 file:text-white"
+          />
         </div>
       )}
 
       {/* OPACITY SLIDER */}
-      <div className="space-y-1 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-        <div className="flex justify-between items-center text-[11px] font-bold">
-          <span className="text-slate-600 dark:text-slate-400">Opacité du fond ({Math.round(opacity * 100)}%) :</span>
+      <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 space-y-1">
+        <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500">
+          <span>Opacité de l'arrière-plan</span>
+          <span className="text-neutral-900 dark:text-neutral-100">{Math.round((opacity ?? 1) * 100)}%</span>
         </div>
         <input
           type="range"
           min="0"
           max="1"
           step="0.05"
-          value={opacity}
+          value={opacity ?? 1}
           onChange={(e) => onChange({ opacity: parseFloat(e.target.value) })}
-          className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          className="w-full h-1.5 bg-neutral-200 dark:bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-neutral-900 dark:accent-neutral-100"
         />
       </div>
     </div>

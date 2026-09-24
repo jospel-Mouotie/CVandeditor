@@ -78,9 +78,13 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
   const handleGenerateLettre = async () => {
     setIsGeneratingLettre(true);
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/lettre-motivation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ cv, langue, entreprise, poste, ton })
       });
       const data = await res.json();
@@ -96,9 +100,13 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
   const handleGenerateLinkedIn = async () => {
     setIsGeneratingLinkedIn(true);
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/linkedin-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ cv, langue })
       });
       const data = await res.json();
@@ -128,9 +136,13 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
 
     setIsAnalyzingOffre(true);
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/analyse-offre', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           cv,
           langue,
@@ -155,9 +167,13 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
 
     setIsAdaptingCV(true);
     try {
+      const token = localStorage.getItem('cv_builder_token') || localStorage.getItem('token');
       const res = await fetch('/api/ai/adapter-candidature', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           cv,
           offreAnalyse: analyseResult,
@@ -445,7 +461,7 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
                       <div className="flex flex-wrap gap-2 pt-1">
                         {linkedInResult.motsClesStrategiques.map((kw, i) => (
                           <span
-                            key={i}
+                            key={`kw-${kw}-${i}`}
                             className="px-3 py-1 bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold border border-blue-200 dark:border-blue-800"
                           >
                             #{kw}
@@ -603,7 +619,7 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
                     {analyseResult.competencesClesRequises?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {analyseResult.competencesClesRequises.map((comp, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-md text-[10px] font-extrabold flex items-center gap-1">
+                          <span key={`comp-req-${comp}-${idx}`} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 rounded-md text-[10px] font-extrabold flex items-center gap-1">
                             <Check className="w-2.5 h-2.5" />
                             <span>{comp}</span>
                           </span>
@@ -622,32 +638,50 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
 
                   {/* List of Custom Questions */}
                   <div className="space-y-4">
-                    {analyseResult.questionsPersonnalisees?.map((q, idx) => (
-                      <div key={q.id || idx} className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-black text-slate-800 dark:text-slate-200">
-                            {q.question}
-                          </span>
+                    {(() => {
+                      const allQuestions = (analyseResult.questionsPersonnalisees && analyseResult.questionsPersonnalisees.length > 0)
+                        ? analyseResult.questionsPersonnalisees
+                        : [
+                            ...(analyseResult.questionsCompetences || []),
+                            ...(analyseResult.questionsExperiences || []),
+                            ...(analyseResult.questionsPrecision || [])
+                          ];
+                      
+                      if (allQuestions.length === 0) {
+                        return (
+                          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-500">
+                            Prêt pour l'adaptation du profil et des compétences selon les exigences de l'offre.
+                          </div>
+                        );
+                      }
+
+                      return allQuestions.map((q, idx) => (
+                        <div key={q.id || `custom-q-${idx}`} className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                              {q.question}
+                            </span>
+                          </div>
+                          {q.description && (
+                            <p className="text-[11px] text-slate-500 pl-7">
+                              {q.description}
+                            </p>
+                          )}
+                          <div className="pl-7 pt-1">
+                            <textarea
+                              rows={2}
+                              value={reponsesQuestions[q.id] || ''}
+                              onChange={(e) => setReponsesQuestions(prev => ({ ...prev, [q.id]: e.target.value }))}
+                              placeholder="Votre réponse authentique (ex: oui, j'ai piloté ce type de projet chez X avec +20% de résultat...)"
+                              className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
                         </div>
-                        {q.description && (
-                          <p className="text-[11px] text-slate-500 pl-7">
-                            {q.description}
-                          </p>
-                        )}
-                        <div className="pl-7 pt-1">
-                          <textarea
-                            rows={2}
-                            value={reponsesQuestions[q.id] || ''}
-                            onChange={(e) => setReponsesQuestions(prev => ({ ...prev, [q.id]: e.target.value }))}
-                            placeholder="Votre réponse authentique (ex: oui, j'ai piloté ce type de projet chez X avec +20% de résultat...)"
-                            className="w-full px-3 py-2 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ));
+                    })()}
                   </div>
 
                   <div className="flex items-center justify-between pt-2">
@@ -697,7 +731,10 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        onApplyPersonalizedCV(adaptationResult.cvPersonnalise);
+                        const targetCV = adaptationResult.cvPersonnalise || adaptationResult.cvModifie || (adaptationResult as any).adaptedCv;
+                        if (targetCV && typeof onApplyPersonalizedCV === 'function') {
+                          onApplyPersonalizedCV(targetCV);
+                        }
                         onClose();
                       }}
                       className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
@@ -715,7 +752,7 @@ export const CareerToolsModal: React.FC<CareerToolsModalProps> = ({
                       </span>
                       <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 list-disc pl-5">
                         {adaptationResult.modificationsApportees.map((mod, i) => (
-                          <li key={i}>{mod}</li>
+                          <li key={`mod-${i}`}>{mod}</li>
                         ))}
                       </ul>
                     </div>
